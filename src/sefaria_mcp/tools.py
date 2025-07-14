@@ -139,14 +139,13 @@ def register_tools(mcp: FastMCP) -> None:
         Performs KNN (K-Nearest Neighbors) search on embeddings of texts from Sefaria.
         
         This tool uses semantic similarity to find text chunks that are conceptually 
-        related to your query, even if they don't contain the exact same words.
+        related to your query, even if they don't contain the exact same words.  Through this 
+        you can discover texts that traditional keyword search or link search might miss
         
         SEARCH TIPS:
-        - Works well with both Hebrew/Aramaic and English queries
-        - Semantic search finds conceptually related content, not just exact matches
-        - Useful for finding related passages, commentaries, or discussions
-        - Can discover connections between texts that traditional keyword search might miss
-        
+        - This database is encoded from English.  Works well only with English queries
+        - Search for phrases and sentences close to what you want to find.  Query for something close to the answer, not the question.
+
         Args:
             query: The search query to find semantically similar text chunks.
             
