@@ -139,4 +139,5 @@ cython_debug/
 .DS_Store
 
 # Workspace
-*.code-workspace 
+*.code-workspace
+*.claude 

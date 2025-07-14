@@ -12,7 +12,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 SEFARIA_API_BASE_URL = os.getenv("SEFARIA_API_BASE_URL", "https://www.sefaria.org")
-#SEFARIA_API_BASE_URL = "http://localhost:8000"
+
+virtual_havruta_host = os.getenv("VIRTUAL_HAVRUTA_HTTP_SERVICE_HOST")
+virtual_havruta_port = os.getenv("VIRTUAL_HAVRUTA_HTTP_SERVICE_PORT")
+
+if virtual_havruta_host and virtual_havruta_port:
+    SEFARIA_AI_BASE_URL = f"http://{virtual_havruta_host}:{virtual_havruta_port}"
+else:
+    SEFARIA_AI_BASE_URL = os.getenv("SEFARIA_AI_BASE_URL", "https://ai.sefaria.org")
+
 
 # Maximum image size in bytes (1MB)
 MAX_IMAGE_SIZE = 1024 * 1024
@@ -852,7 +860,56 @@ async def get_search_path_filter(logger, book_name: str) -> str:
     
     except requests.exceptions.RequestException as e:
         logger.error(f"Error during search path filter API request: {str(e)}")
-        return None 
+        return None
+
+async def knn_search(logger, query: str, filters: dict = None) -> str:
+    """
+    Performs KNN search on embeddings of texts from Sefaria using the AI server.
+    
+    Args:
+        query (str): The search query to find similar text chunks
+        filters (dict, optional): Metadata filters to apply to the search
+        
+    Returns:
+        str: JSON string containing the nearest chunks with their original content and metadata
+    """
+    logger = _ensure_logger(logger)
+    try:
+        # Build the URL for the KNN search endpoint
+        url = f"{SEFARIA_AI_BASE_URL}/api/knn-search"
+        
+        # Prepare the request payload
+        payload = {
+            "query": query
+        }
+        
+        # Add filters if provided
+        if filters:
+            payload["filters"] = filters
+        
+        logger.debug(f"KNN search API request URL: {url}")
+        logger.debug(f"KNN search payload: {payload}")
+        
+        # Make the POST request
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        
+        # Parse the JSON response
+        data = response.json()
+        logger.debug(f"KNN search response received, size: {len(str(data))} characters")
+        
+        return json.dumps(data, indent=2, ensure_ascii=False)
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error during KNN search API request: {str(e)}")
+        return json.dumps({
+            "error": f"Error during KNN search API request: {str(e)}"
+        }, ensure_ascii=False)
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing KNN search response: {str(e)}")
+        return json.dumps({
+            "error": f"Error parsing KNN search response: {str(e)}"
+        }, ensure_ascii=False) 
 
 # ---------------------------------------------------------------------------
 # Logger adapter utilities

@@ -10,6 +10,7 @@ from .logic import (
     get_search_path_filter as _get_search_path_filter,
     get_manuscript as _get_manuscript,
     get_situational_info as _get_situational_info,
+    knn_search as _knn_search,
 )
 
 def register_tools(mcp: FastMCP) -> None:
@@ -131,6 +132,36 @@ def register_tools(mcp: FastMCP) -> None:
         result = await _get_manuscript(ctx.log, image_url, manuscript_title)
         ctx.log(f"[get_manuscript] response size: {_payload_size(result)} bytes")
         return json.dumps(result, ensure_ascii=False)
+
+    @mcp.tool
+    async def knn_search(ctx: Context, query: str, filters: Optional[dict] = None) -> str:
+        """
+        Performs KNN (K-Nearest Neighbors) search on embeddings of texts from Sefaria.
+        
+        This tool uses semantic similarity to find text chunks that are conceptually 
+        related to your query, even if they don't contain the exact same words.  Through this 
+        you can discover texts that traditional keyword search or link search might miss
+        
+        SEARCH TIPS:
+        - This database is encoded from English.  Works well only with English queries
+        - Search for phrases and sentences close to what you want to find.  Query for something close to the answer, not the question.
+
+        Args:
+            query: The search query to find semantically similar text chunks.
+            filters: Optional metadata filters to apply to the search. Can include:
+                - document_categories: List of document types (e.g., ["Mishnah", "Talmud"]). Use get_name to validate category names.
+                - authors: List of author names (e.g., ["Rashi", "Rambam"]). Use get_name to validate author names.
+                - eras: List of historical periods. Valid values: "Tannaim", "Amoraim", "Geonim", "Rishonim", "Acharonim", "Contemporary"
+                - topics: List of topics (e.g., ["halakhah", "aggadah"]). Use get_name to validate topic names.
+                - places: List of composition places (e.g., ["Jerusalem", "Babylon"])
+            
+        Returns:
+            JSON string containing the nearest chunks with their original content and metadata.
+        """
+        ctx.log(f"[knn_search] called with query={query!r}, filters={filters!r}")
+        result = await _knn_search(ctx.log, query, filters)
+        ctx.log(f"[knn_search] response size: {_payload_size(result)} bytes")
+        return result
 
     @mcp.tool
     async def get_situational_info(ctx: Context) -> str:

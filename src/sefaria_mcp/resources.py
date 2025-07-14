@@ -127,15 +127,15 @@ def register_resources(mcp: FastMCP) -> None:
         type_filter: str | None = None,
     ) -> str:
         """
-        Validates and autocompletes text names, book titles, references, and topic slugs.
+        Validates and autocompletes text names, book titles, references, topic slugs, author names, and categories.
 
         Args:
             name: Partial or complete name to validate/complete.
             limit: Maximum number of suggestions to return.
-            type_filter: Filter results by type (e.g., 'ref', 'Topic').
+            type_filter: Filter results by type (e.g., 'ref', 'Topic', 'Collection').
 
         Returns:
-            JSON string with name suggestions.
+            JSON string with name suggestions including authors, topics, and categories.
         """
         ctx.log(f"[get_name] called with name={name!r}, limit={limit!r}, type_filter={type_filter!r}")
         result = await _get_name(ctx.log, name, limit, type_filter)

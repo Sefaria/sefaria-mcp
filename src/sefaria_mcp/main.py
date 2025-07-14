@@ -28,7 +28,7 @@ app.router.redirect_slashes = False
 
 
 def main() -> None:  # pragma: no cover – simple wrapper for console_scripts
-    mcp.run(transport="sse", host="0.0.0.0", port=8088)
+    mcp.run(transport="sse", path="/sse", host="0.0.0.0", port=8088)
 
 if __name__ == "__main__":
     main() 
