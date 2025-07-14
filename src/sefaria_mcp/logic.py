@@ -890,8 +890,14 @@ async def knn_search(logger, query: str, filters: dict = None) -> str:
         logger.debug(f"KNN search API request URL: {url}")
         logger.debug(f"KNN search payload: {payload}")
         
+        # Get the bearer token from environment variable
+        bearer_token = os.getenv("SEFARIA_AI_TOKEN")
+        headers = {}
+        if bearer_token:
+            headers["Authorization"] = f"Bearer {bearer_token}"
+        
         # Make the POST request
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, headers=headers)
         response.raise_for_status()
         
         # Parse the JSON response
