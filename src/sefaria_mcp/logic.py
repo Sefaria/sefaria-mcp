@@ -862,12 +862,13 @@ async def get_search_path_filter(logger, book_name: str) -> str:
         logger.error(f"Error during search path filter API request: {str(e)}")
         return None
 
-async def knn_search(logger, query: str) -> str:
+async def knn_search(logger, query: str, filters: dict = None) -> str:
     """
     Performs KNN search on embeddings of texts from Sefaria using the AI server.
     
     Args:
         query (str): The search query to find similar text chunks
+        filters (dict, optional): Metadata filters to apply to the search
         
     Returns:
         str: JSON string containing the nearest chunks with their original content and metadata
@@ -881,6 +882,10 @@ async def knn_search(logger, query: str) -> str:
         payload = {
             "query": query
         }
+        
+        # Add filters if provided
+        if filters:
+            payload["filters"] = filters
         
         logger.debug(f"KNN search API request URL: {url}")
         logger.debug(f"KNN search payload: {payload}")

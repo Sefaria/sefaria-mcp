@@ -134,7 +134,7 @@ def register_tools(mcp: FastMCP) -> None:
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
-    async def knn_search(ctx: Context, query: str) -> str:
+    async def knn_search(ctx: Context, query: str, filters: Optional[dict] = None) -> str:
         """
         Performs KNN (K-Nearest Neighbors) search on embeddings of texts from Sefaria.
         
@@ -148,12 +148,18 @@ def register_tools(mcp: FastMCP) -> None:
 
         Args:
             query: The search query to find semantically similar text chunks.
+            filters: Optional metadata filters to apply to the search. Can include:
+                - document_categories: List of document types (e.g., ["Mishnah", "Talmud"]). Use get_name to validate category names.
+                - authors: List of author names (e.g., ["Rashi", "Rambam"]). Use get_name to validate author names.
+                - eras: List of historical periods. Valid values: "Tannaim", "Amoraim", "Geonim", "Rishonim", "Acharonim", "Contemporary"
+                - topics: List of topics (e.g., ["halakhah", "aggadah"]). Use get_name to validate topic names.
+                - places: List of composition places (e.g., ["Jerusalem", "Babylon"])
             
         Returns:
             JSON string containing the nearest chunks with their original content and metadata.
         """
-        ctx.log(f"[knn_search] called with query={query!r}")
-        result = await _knn_search(ctx.log, query)
+        ctx.log(f"[knn_search] called with query={query!r}, filters={filters!r}")
+        result = await _knn_search(ctx.log, query, filters)
         ctx.log(f"[knn_search] response size: {_payload_size(result)} bytes")
         return result
 
