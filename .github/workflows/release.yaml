@@ -110,11 +110,11 @@ jobs:
           file: ./Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-#      - name: Deploy
-#        run: |
-#          curl \
-#          -X POST \
-#          -H "Accept: application/vnd.github.v3+json" \
-#          -H "Authorization: Bearer ${{ secrets.API_TOKEN }}" \
-#          https://api.github.com/repos/Sefaria/AppliedAI-Infrastructure/actions/workflows/app-deploy.yml/dispatches \
-#          -d '{"ref":"main", "inputs": { "environment": "${{ contains(github.ref, 'main') && 'prod' || 'dev' }}", "appVersion": "${{ needs.release.outputs.version}}" }}'
+      - name: Deploy
+        run: |
+          curl \
+          -X POST \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: Bearer ${{ secrets.API_TOKEN }}" \
+          https://api.github.com/repos/Sefaria/AppliedAI-Infrastructure/actions/workflows/mcp-deploy.yml/dispatches \
+          -d '{"ref":"main", "inputs": { "environment": "${{ contains(github.ref, 'main') && 'prod' || 'dev' }}", "appVersion": "${{ needs.release.outputs.version}}", "appName": "mcp" }}'
