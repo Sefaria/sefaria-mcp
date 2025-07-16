@@ -71,6 +71,9 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
 - Connect your MCP-compatible client to the `/sse` endpoint.
 - All tool endpoints are available via the MCP protocol.
 
+## Commit Hygiene
+
+This repo uses semantic commits with the `fix`, `feat`, and `chore` keywords.
 ## Acknowledgments
 
 Special thanks to [@Sivan22](https://github.com/Sivan22) for pioneering the first Sefaria MCP server ([mcp-sefaria-server](https://github.com/Sivan22/mcp-sefaria-server)), which inspired this project and the broader effort to make Jewish texts accessible to LLMs and modern AI tools.
