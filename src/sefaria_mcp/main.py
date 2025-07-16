@@ -1,7 +1,6 @@
 from fastmcp import FastMCP
 
 # Local imports
-from .resources import register_resources
 from .tools import register_tools
 
 # ---------------------------------------------------------------------------
@@ -11,10 +10,9 @@ from .tools import register_tools
 
 mcp = FastMCP("Sefaria MCP 📚")
 
-# Register resources and tools defined in separate modules. This keeps the
-# top-level file small while still using the recommended `@mcp.tool` /
-# `@mcp.resource` decorators inside those modules.
-register_resources(mcp)
+# Register all tools defined in the tools module. This keeps the
+# top-level file small while still using the recommended `@mcp.tool` 
+# decorators inside the tools module.
 register_tools(mcp)
 
 # Create a Starlette-compatible ASGI app for use with Uvicorn/Hypercorn.

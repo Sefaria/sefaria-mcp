@@ -657,7 +657,7 @@ async def get_topics(logger, topic_slug: str, with_links: bool = False, with_ref
     except requests.exceptions.RequestException as e:
         return f"Error during topics API request: {str(e)}"
 
-async def get_manuscript_info(logger, reference: str) -> str:
+async def get_available_manuscripts(logger, reference: str) -> str:
     """
     Retrieves manuscript images and metadata for a given textual reference.
     
@@ -697,7 +697,7 @@ async def get_manuscript_info(logger, reference: str) -> str:
     except requests.exceptions.RequestException as e:
         return f"Error during manuscripts API request: {str(e)}"
 
-async def get_manuscript(logger, image_url: str, manuscript_title: str = None) -> dict:
+async def get_manuscript_image(logger, image_url: str, manuscript_title: str = None) -> dict:
     """
     Downloads a manuscript image from the provided URL and returns it as base64 data.
     If the image is larger than MAX_IMAGE_SIZE, it will be resized while maintaining aspect ratio.
