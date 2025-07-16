@@ -4,18 +4,32 @@ A modern [MCP (Model Context Protocol)](https://github.com/ai21labs/model-contex
 
 ## What does this server do?
 
-This server exposes the Sefaria Jewish library as a set of MCP tools, allowing LLMs and other MCP clients to:
+This server exposes the Sefaria Jewish library as a set of 15 MCP tools, allowing LLMs and other MCP clients to:
 
-- Retrieve Jewish texts by reference (e.g., "Genesis 1:1")
-- Retrieve all available English translations for a text
-- Get bibliographic and structural information (index) for a work
-- Find cross-references and connections (links)
-- Autocomplete and validate text names, book titles, and topics
-- Explore the hierarchical structure of texts and categories
-- Retrieve detailed information about topics in Jewish thought
-- Access historical manuscript metadata and images
-- Search the Sefaria library and dictionaries
-- Get situational Jewish calendar information
+**Primary Tools:**
+- **get_text** - Retrieve Jewish texts by reference (e.g., "Genesis 1:1")
+- **text_search** - Search across the entire Jewish library
+- **get_current_calendar** - Get situational Jewish calendar information
+- **english_semantic_search** - Semantic similarity search on English text embeddings
+
+**Core Tools:**
+- **get_links_between_texts** - Find cross-references and connections between texts
+- **search_in_book** - Search within a specific book or text work
+- **search_in_dictionaries** - Search Jewish reference dictionaries
+
+**Support Tools:**
+- **get_english_translations** - Retrieve all available English translations for a text
+- **get_topic_details** - Retrieve detailed information about topics in Jewish thought
+- **clarify_name_argument** - Autocomplete and validate text names, book titles, and topics
+- **clarify_search_path_filter** - Convert book names to proper search filter paths
+
+**Structure Tools:**
+- **get_text_or_category_shape** - Explore the hierarchical structure of texts and categories
+- **get_text_catalogue_info** - Get bibliographic and structural information (index) for a work
+
+**Manuscript Tools:**
+- **get_available_manuscripts** - Access historical manuscript metadata and image URLs
+- **get_manuscript_image** - Download and process specific manuscript images
 
 All endpoints are optimized for LLM consumption (compact, relevant, and structured responses).
 
