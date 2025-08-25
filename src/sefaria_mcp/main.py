@@ -1,32 +1,47 @@
 from fastmcp import FastMCP
-
-# Local imports
+from starlette.applications import Starlette
+from starlette.responses import JSONResponse, Response
+from starlette.routing import Route, Mount
 from .tools import register_tools
 
-# ---------------------------------------------------------------------------
-# Create the FastMCP server instance. Giving the server a descriptive name is
-# recommended for easier discovery when multiple MCP servers are running.
-# ---------------------------------------------------------------------------
 
 mcp = FastMCP("Sefaria MCP 📚")
-
-# Register all tools defined in the tools module. This keeps the
-# top-level file small while still using the recommended `@mcp.tool` 
-# decorators inside the tools module.
 register_tools(mcp)
 
-# Create a Starlette-compatible ASGI app for use with Uvicorn/Hypercorn.
-# This exposes the MCP endpoint at `/sse` and keeps FastMCP's session manager intact.
-app = mcp.http_app(transport="sse")
-app.router.redirect_slashes = False
+# Create the FastMCP app
+fastmcp_app = mcp.http_app(transport="sse")
+fastmcp_app.router.redirect_slashes = False
 
-# ---------------------------------------------------------------------------
-# CLI entry-point
-# ---------------------------------------------------------------------------
+# ---- WELL-KNOWN METADATA (no-auth stubs) ----
+PROTECTED_RESOURCE_DOC = {
+    # Use your actual origin, no trailing slash:
+    "resource": "https://devmcp.sefaria.org",
+    "authorization_servers": []  # <- explicitly none
+}
+
+def protected_resource_endpoint(request):
+    return JSONResponse(PROTECTED_RESOURCE_DOC)
+
+def authorization_server_endpoint(request):
+    # Empty JSON is fine; some clients just want a 200 JSON.
+    return JSONResponse({})
+
+# Create a parent Starlette app with well-known endpoints
+app = Starlette()
+app.router.routes.extend([
+    Route("/.well-known/oauth-protected-resource", protected_resource_endpoint, methods=["GET"]),
+    Route("/.well-known/oauth-authorization-server", authorization_server_endpoint, methods=["GET"]),
+    # Defensive variants for clients that (incorrectly) append your path:
+    Route("/.well-known/oauth-protected-resource/sse", protected_resource_endpoint, methods=["GET"]),
+    Route("/.well-known/oauth-authorization-server/sse", authorization_server_endpoint, methods=["GET"]),
+    # Mount FastMCP app to handle all other routes
+    Mount("/", fastmcp_app)
+])
 
 
 def main() -> None:  # pragma: no cover – simple wrapper for console_scripts
-    mcp.run(transport="sse", path="/sse", host="0.0.0.0", port=8088)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8088)
 
 if __name__ == "__main__":
     main() 
