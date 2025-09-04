@@ -87,7 +87,8 @@ def register_tools(mcp: FastMCP) -> None:
         ctx.log(f"[text_search] called with query={query!r}, filters={filters!r}, size={size!r}")
         result = await _search_texts(ctx.log, query, filters, size)
         ctx.log(f"[text_search] response size: {_payload_size(result)} bytes")
-        return result
+        # Ensure we always return a string for MCP transport
+        return result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
     async def get_current_calendar(ctx: Context) -> str:
@@ -171,7 +172,8 @@ def register_tools(mcp: FastMCP) -> None:
         ctx.log(f"[search_in_book] called with query={query!r}, book_name={book_name!r}, size={size!r}")
         result = await _search_in_book(ctx.log, query, book_name, size)
         ctx.log(f"[search_in_book] response size: {_payload_size(result)} bytes")
-        return result
+        # Ensure we always return a string for MCP transport
+        return result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
     async def search_in_dictionaries(ctx: Context, query: str) -> str:
@@ -193,7 +195,8 @@ def register_tools(mcp: FastMCP) -> None:
         ctx.log(f"[search_in_dictionaries] called with query={query!r}")
         result = await _search_in_dictionaries(ctx.log, query)
         ctx.log(f"[search_in_dictionaries] response size: {_payload_size(result)} bytes")
-        return result
+        # Ensure we always return a string for MCP transport
+        return result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
 
     # -----------------------------
     # English translations
@@ -282,7 +285,8 @@ def register_tools(mcp: FastMCP) -> None:
         ctx.log(f"[clarify_search_path_filter] called with book_name={book_name!r}")
         result = await _get_search_path_filter(ctx.log, book_name)
         ctx.log(f"[clarify_search_path_filter] response size: {_payload_size(result)} bytes")
-        return result
+        # Ensure we always return a string for MCP transport
+        return result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
 
 
     @mcp.tool
