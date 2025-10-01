@@ -10,7 +10,7 @@ This server exposes the Sefaria Jewish library as a set of 15 MCP tools, allowin
 - **get_text** - Retrieve Jewish texts by reference (e.g., "Genesis 1:1")
 - **text_search** - Search across the entire Jewish library
 - **get_current_calendar** - Get situational Jewish calendar information
-- **english_semantic_search** - Semantic similarity search on English text embeddings
+- **english_semantic_search** - Semantic similarity search on English text embeddings (Currently only works from official Sefaria MCP)
 
 **Core Tools:**
 - **get_links_between_texts** - Find cross-references and connections between texts
