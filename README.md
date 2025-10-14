@@ -62,7 +62,7 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     ```bash
     python -m sefaria_mcp.main
     ```
-    The server will be available at `http://127.0.0.1:8088/sse` by default.
+    The server will be available at `http://127.0.0.1:7860/sse` by default.
 
 ### Docker
 
@@ -72,7 +72,7 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     ```
 2. **Run the container:**
     ```bash
-    docker run -d --name sefaria-mcp -p 8089:8088 sefaria-mcp
+    docker run -d --name sefaria-mcp -p 8089:7860 sefaria-mcp
     ```
     The server will be available at `http://localhost:8089/sse`.
 

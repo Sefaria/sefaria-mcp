@@ -1,7 +1,7 @@
 {
 	"servers": {
 		// "LocalSefaria": {
-		// 	"url": "http://localhost:8088/sse",
+		// 	"url": "http://localhost:7860/sse",
 		// 	"type": "sse"
 		// },
         "HuggingFace": {
