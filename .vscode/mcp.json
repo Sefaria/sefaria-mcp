@@ -1,0 +1,8 @@
+{
+	"servers": {
+		"LocalSefaria": {
+			"url": "http://localhost:8088/sse",
+			"type": "sse"
+		}
+	}
+}
