@@ -1,0 +1,12 @@
+{
+	"servers": {
+		// "LocalSefaria": {
+		// 	"url": "http://localhost:7860/sse",
+		// 	"type": "sse"
+		// },
+        "HuggingFace": {
+            "url": "https://dn-9281411-sefaria-mcp.hf.space/sse",
+            "type": "sse"
+        }
+	}
+}

@@ -1,3 +1,12 @@
+---
+title: Sefaria MCP
+emoji: 📚
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # Sefaria MCP Server
 
 A modern [MCP (Model Context Protocol)](https://github.com/ai21labs/model-context-protocol) server for accessing the Jewish library via the Sefaria API.
@@ -53,7 +62,7 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     ```bash
     python -m sefaria_mcp.main
     ```
-    The server will be available at `http://127.0.0.1:8088/sse` by default.
+    The server will be available at `http://127.0.0.1:7860/sse` by default.
 
 ### Docker
 
@@ -63,9 +72,17 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     ```
 2. **Run the container:**
     ```bash
-    docker run -d --name sefaria-mcp -p 8089:8088 sefaria-mcp
+    docker run -d --name sefaria-mcp -p 8089:7860 sefaria-mcp
     ```
     The server will be available at `http://localhost:8089/sse`.
+
+### Run on Hugging Face Spaces
+1. Create a hugging face account, spaces and api token.
+2. Update the `env` section in the `.github/workflows/hf-sync.yaml` file with your space information.
+3. Add the Hugging Face API token to your repository secrets as `HUGGINGFACE_API_KEY`.
+4. Run the `Sync to Hugging Face Space` to deploy.
+5. Set your client to the URL of the space, for example 'https://dn-9281411-sefaria-mcp.hf.space/sse'.
+
 
 ### Usage
 - Connect your MCP-compatible client to the `/sse` endpoint.
