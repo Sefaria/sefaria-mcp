@@ -20,6 +20,7 @@ RUN useradd --create-home --shell /bin/bash --uid 1001 app \
     && chown -R app:app /app
 USER 1001
 
-EXPOSE 8088
+# Hugging Face requires the app to run on port 7860
+EXPOSE 7860
 
 CMD ["python", "-m", "sefaria_mcp.main"] 

@@ -1,0 +1,23 @@
+name: Sync to Hugging Face Space
+
+on:
+#   push:
+#     branches: [main]
+  workflow_dispatch:
+
+env:
+  HF_USER: dn-9281411
+  HF_SPACE: sefaria-mcp
+  HF_TOKEN: ${{ secrets.HUGGINGFACE_API_KEY }}
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Space
+        run: |
+          git push https://$HF_USER:$HF_TOKEN@huggingface.co/spaces/$HF_USER/$HF_SPACE main --force
