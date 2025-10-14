@@ -76,6 +76,14 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     ```
     The server will be available at `http://localhost:8089/sse`.
 
+### Run on Hugging Face Spaces
+1. Create a hugging face account, spaces and api token.
+2. Update the `env` section in the `.github/workflows/hf-sync.yaml` file with your space information.
+3. Add the Hugging Face API token to your repository secrets as `HUGGINGFACE_API_KEY`.
+4. Run the `Sync to Hugging Face Space` to deploy.
+5. Set your client to the URL of the space, for example 'https://dn-9281411-sefaria-mcp.hf.space/sse'.
+
+
 ### Usage
 - Connect your MCP-compatible client to the `/sse` endpoint.
 - All tool endpoints are available via the MCP protocol.
