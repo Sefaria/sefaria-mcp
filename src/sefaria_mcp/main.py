@@ -1,6 +1,11 @@
+import os
+
 from fastmcp import FastMCP
+from prometheus_client import start_http_server
+from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+
 from .tools import register_tools
 
 
@@ -36,9 +41,21 @@ async def authorization_server_endpoint_sse(request: Request) -> JSONResponse:
 app = mcp.http_app(transport="sse")
 app.router.redirect_slashes = False
 
+# Expose Prometheus metrics for MCP health and usage monitoring
+instrumentator = Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+    should_instrument_requests_inprogress=True,
+)
+instrumentator.instrument(app)
+
+metrics_port = int(os.getenv("SEFARIA_MCP_METRICS_PORT", "9090"))
+start_http_server(metrics_port)
+
 
 def main() -> None:  # pragma: no cover – simple wrapper for console_scripts
-    mcp.run(transport="sse", path="/sse", host="0.0.0.0", port=8088)
+    port = int(os.getenv("SEFARIA_MCP_PORT", "8088"))
+    mcp.run(transport="sse", path="/sse", host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     main() 

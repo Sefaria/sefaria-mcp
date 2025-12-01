@@ -3,6 +3,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+ENV SEFARIA_MCP_PORT=8088
+ENV SEFARIA_MCP_METRICS_PORT=9090
+
 RUN apt-get update && apt-get install -y \
     gcc \
     curl \
@@ -20,6 +23,6 @@ RUN useradd --create-home --shell /bin/bash --uid 1001 app \
     && chown -R app:app /app
 USER 1001
 
-EXPOSE 8088
+EXPOSE 8088 9090
 
 CMD ["python", "-m", "sefaria_mcp.main"] 
