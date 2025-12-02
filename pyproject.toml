@@ -16,7 +16,9 @@ dependencies = [
     "pillow",
     "fastapi",
     "uvicorn",
-    "python-dotenv"
+    "python-dotenv",
+    "prometheus-fastapi-instrumentator",
+    "prometheus-client"
 ]
 
 [project.scripts]

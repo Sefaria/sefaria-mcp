@@ -10,7 +10,7 @@ This server exposes the Sefaria Jewish library as a set of 15 MCP tools, allowin
 - **get_text** - Retrieve Jewish texts by reference (e.g., "Genesis 1:1")
 - **text_search** - Search across the entire Jewish library
 - **get_current_calendar** - Get situational Jewish calendar information
-- **english_semantic_search** - Semantic similarity search on English text embeddings
+- **english_semantic_search** - Semantic similarity search on English text embeddings (Currently only works from official Sefaria MCP)
 
 **Core Tools:**
 - **get_links_between_texts** - Find cross-references and connections between texts
@@ -54,6 +54,8 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     python -m sefaria_mcp.main
     ```
     The server will be available at `http://127.0.0.1:8088/sse` by default.
+    Set `SEFARIA_MCP_PORT` to override the SSE/API port (e.g., `SEFARIA_MCP_PORT=8089 python -m sefaria_mcp.main`).
+    Prometheus metrics bind separately on `SEFARIA_MCP_METRICS_PORT` (default `9090`).
 
 ### Docker
 
@@ -63,13 +65,22 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     ```
 2. **Run the container:**
     ```bash
-    docker run -d --name sefaria-mcp -p 8089:8088 sefaria-mcp
+    docker run -d --name sefaria-mcp \
+        -e SEFARIA_MCP_PORT=8089 \
+        -e SEFARIA_MCP_METRICS_PORT=9090 \
+        -p 8089:8089 \
+        -p 9090:9090 \
+        sefaria-mcp
     ```
-    The server will be available at `http://localhost:8089/sse`.
+    The server will be available at `http://localhost:8089/sse` and metrics at `http://localhost:9090/` (adjust the port mappings as needed).
 
 ### Usage
 - Connect your MCP-compatible client to the `/sse` endpoint.
 - All tool endpoints are available via the MCP protocol.
+
+### Monitoring
+- Prometheus metrics are exposed via the standalone HTTP server started on `SEFARIA_MCP_METRICS_PORT` (defaults to `9090`).
+- The metrics contain standard FastAPI instrumentation (request rate, latency, status codes, in-progress requests, etc.) suitable for scraping by Prometheus or compatible tools.
 
 ## Commit Hygiene
 
