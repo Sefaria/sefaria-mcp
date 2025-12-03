@@ -55,7 +55,7 @@ instrumentator.instrument(app)
 
 def start_metrics_server() -> None:
     """Start the Prometheus metrics endpoint without crashing if the port is busy."""
-    metrics_port = int(os.getenv("SEFARIA_MCP_METRICS_PORT", "9090"))
+    metrics_port = 9090
     try:
         start_http_server(metrics_port)
     except OSError as exc:
@@ -64,8 +64,7 @@ def start_metrics_server() -> None:
 
 def main() -> None:  # pragma: no cover – simple wrapper for console_scripts
     start_metrics_server()
-    port = int(os.getenv("SEFARIA_MCP_PORT", "8088"))
-    mcp.run(transport="sse", path="/sse", host="0.0.0.0", port=port)
+    mcp.run(transport="sse", path="/sse", host="0.0.0.0", port=8088)
 
 if __name__ == "__main__":
     main()
