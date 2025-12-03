@@ -1,14 +1,17 @@
-"""Top-level package for the Sefaria FastMCP server.
+"""Top-level package for the Sefaria FastMCP server."""
 
-The :data:`mcp` object is the fully configured FastMCP server instance so
-external code (tests, other servers, etc.) can import it directly:
+from importlib import import_module
+from typing import TYPE_CHECKING
 
-    from sefaria_mcp import mcp
+__all__: list[str] = ["mcp", "main"]
 
-For CLI usage, install the package and run the `sefaria-mcp` command that is
-declared in *pyproject.toml* – it simply calls :pyfunc:`.main`.
-"""
+# Import lazily to avoid double-import issues when running as a module
+if TYPE_CHECKING:  # pragma: no cover - for static analyzers only
+    from .main import mcp, main  # noqa: F401
 
-from .main import mcp, main  # re-export for convenience
 
-__all__: list[str] = ["mcp", "main"] 
+def __getattr__(name: str):
+    if name in __all__:
+        module = import_module(".main", __name__)
+        return getattr(module, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name}")
