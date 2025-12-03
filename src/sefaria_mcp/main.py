@@ -1,3 +1,4 @@
+import logging
 import os
 
 from fastmcp import FastMCP
@@ -41,6 +42,8 @@ async def authorization_server_endpoint_sse(request: Request) -> JSONResponse:
 app = mcp.http_app(transport="sse")
 app.router.redirect_slashes = False
 
+logger = logging.getLogger(__name__)
+
 # Expose Prometheus metrics for MCP health and usage monitoring
 instrumentator = Instrumentator(
     should_group_status_codes=True,
@@ -49,13 +52,20 @@ instrumentator = Instrumentator(
 )
 instrumentator.instrument(app)
 
-metrics_port = int(os.getenv("SEFARIA_MCP_METRICS_PORT", "9090"))
-start_http_server(metrics_port)
+
+def start_metrics_server() -> None:
+    """Start the Prometheus metrics endpoint without crashing if the port is busy."""
+    metrics_port = int(os.getenv("SEFARIA_MCP_METRICS_PORT", "9090"))
+    try:
+        start_http_server(metrics_port)
+    except OSError as exc:
+        logger.warning("Skipping metrics server on port %s: %s", metrics_port, exc)
 
 
 def main() -> None:  # pragma: no cover – simple wrapper for console_scripts
+    start_metrics_server()
     port = int(os.getenv("SEFARIA_MCP_PORT", "8088"))
     mcp.run(transport="sse", path="/sse", host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
-    main() 
+    main()
