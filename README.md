@@ -80,7 +80,13 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
 
 ### Monitoring
 - Prometheus metrics are exposed via the standalone HTTP server started on `SEFARIA_MCP_METRICS_PORT` (defaults to `9090`).
-- The metrics contain standard FastAPI instrumentation (request rate, latency, status codes, in-progress requests, etc.) suitable for scraping by Prometheus or compatible tools.
+- Scrape `http://localhost:9090/` (or your configured host/port). Metrics include:
+  - `mcp_tool_calls_total{tool_name,status}` – call counts per tool and status.
+  - `mcp_tool_duration_seconds{tool_name}` – histogram of per-call durations.
+  - `mcp_tool_payload_bytes{tool_name}` – histogram of response payload sizes.
+  - `mcp_errors_total{tool_name,error_type}` – per-tool error counts.
+  - `mcp_active_connections` – current SSE connection gauge.
+  - Standard FastAPI instrumentation (request rate, latency, status codes, in-progress requests, etc.) from `prometheus_fastapi_instrumentator`.
 
 ## Commit Hygiene
 
