@@ -54,6 +54,8 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     python -m sefaria_mcp.main
     ```
     The server will be available at `http://127.0.0.1:8088/sse` by default.
+    Set `SEFARIA_MCP_PORT` to override the SSE/API port (e.g., `SEFARIA_MCP_PORT=8089 python -m sefaria_mcp.main`).
+    Prometheus metrics bind separately on `SEFARIA_MCP_METRICS_PORT` (default `9090`).
 
 ### Docker
 
@@ -63,13 +65,28 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     ```
 2. **Run the container:**
     ```bash
-    docker run -d --name sefaria-mcp -p 8089:8088 sefaria-mcp
+    docker run -d --name sefaria-mcp \
+        -e SEFARIA_MCP_PORT=8089 \
+        -e SEFARIA_MCP_METRICS_PORT=9090 \
+        -p 8089:8089 \
+        -p 9090:9090 \
+        sefaria-mcp
     ```
-    The server will be available at `http://localhost:8089/sse`.
+    The server will be available at `http://localhost:8089/sse` and metrics at `http://localhost:9090/` (adjust the port mappings as needed).
 
 ### Usage
 - Connect your MCP-compatible client to the `/sse` endpoint.
 - All tool endpoints are available via the MCP protocol.
+
+### Monitoring
+- Prometheus metrics are exposed via the standalone HTTP server started on `SEFARIA_MCP_METRICS_PORT` (defaults to `9090`).
+- Scrape `http://localhost:9090/` (or your configured host/port). Metrics include:
+  - `mcp_tool_calls_total{tool_name,status}` – call counts per tool and status.
+  - `mcp_tool_duration_seconds{tool_name}` – histogram of per-call durations.
+  - `mcp_tool_payload_bytes{tool_name}` – histogram of response payload sizes.
+  - `mcp_errors_total{tool_name,error_type}` – per-tool error counts.
+  - `mcp_active_connections` – current SSE connection gauge.
+  - Standard FastAPI instrumentation (request rate, latency, status codes, in-progress requests, etc.) from `prometheus_fastapi_instrumentator`.
 
 ## Commit Hygiene
 

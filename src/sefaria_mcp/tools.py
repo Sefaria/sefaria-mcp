@@ -1,6 +1,6 @@
 from typing import List, Optional
 import json
-
+import time
 from fastmcp import FastMCP, Context
 
 from .logic import (
@@ -21,6 +21,14 @@ from .logic import (
     get_index as _get_index,
 )
 
+# Import metrics from main module (will be set during initialization)
+_metrics = None
+
+def set_metrics(metrics_dict):
+    """Set the metrics objects from the main module."""
+    global _metrics
+    _metrics = metrics_dict
+
 def register_tools(mcp: FastMCP) -> None:
     """Register all tool functions with the provided :pyclass:`FastMCP` instance."""
 
@@ -39,11 +47,33 @@ def register_tools(mcp: FastMCP) -> None:
         except Exception:
             return len(str(payload).encode())
 
+    async def _run_with_metrics(tool_name: str, func, *args, **kwargs):
+        """Execute a coroutine and record metrics, without changing the tool signature."""
+        start_time = time.time()
+        status = "success"
+        result = None
+        try:
+            result = await func(*args, **kwargs)
+            if _metrics:
+                payload_size = _payload_size(result)
+                _metrics['payload_bytes'].labels(tool_name=tool_name).observe(payload_size)
+            return result
+        except Exception as e:
+            status = "error"
+            if _metrics:
+                error_type = type(e).__name__
+                _metrics['errors'].labels(tool_name=tool_name, error_type=error_type).inc()
+            raise
+        finally:
+            if _metrics:
+                duration = time.time() - start_time
+                _metrics['duration'].labels(tool_name=tool_name).observe(duration)
+                _metrics['calls'].labels(tool_name=tool_name, status=status).inc()
+
     # -----------------------------
     # Primary Tools (Top 4)
     # -----------------------------
 
-    @mcp.tool
     async def get_text(ctx: Context, reference: str, version_language: str | None = None) -> str:
         """
         Retrieves the actual text content from a specific reference in the Jewish library.
@@ -56,11 +86,12 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with the text content.
         """
         ctx.log(f"[get_text] called with reference={reference!r}, version_language={version_language!r}")
-        result = await _get_text(ctx.log, reference, version_language)
+        result = await _run_with_metrics("get_text", _get_text, ctx.log, reference, version_language)
         ctx.log(f"[get_text] response size: {_payload_size(result)} bytes")
         return result
+    
+    mcp.tool(get_text)
 
-    @mcp.tool
     async def text_search(
         ctx: Context,
         query: str,
@@ -85,20 +116,22 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with search results.
         """
         ctx.log(f"[text_search] called with query={query!r}, filters={filters!r}, size={size!r}")
-        result = await _search_texts(ctx.log, query, filters, size)
+        result = await _run_with_metrics("text_search", _search_texts, ctx.log, query, filters, size)
         ctx.log(f"[text_search] response size: {_payload_size(result)} bytes")
         # Ensure we always return a string for MCP transport
         return result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+    
+    mcp.tool(text_search)
 
-    @mcp.tool
     async def get_current_calendar(ctx: Context) -> str:
         """Provides current Jewish calendar information including Hebrew date, parasha, holidays, etc."""
         ctx.log("[get_current_calendar] called")
-        result = await _get_situational_info(ctx.log)
+        result = await _run_with_metrics("get_current_calendar", _get_situational_info, ctx.log)
         ctx.log(f"[get_current_calendar] response size: {_payload_size(result)} bytes")
         return result
+    
+    mcp.tool(get_current_calendar)
 
-    @mcp.tool
     async def english_semantic_search(ctx: Context, query: str, filters: Optional[dict] = None) -> str:
         """
         Performs semantic similarity search on English embeddings of texts from Sefaria.
@@ -124,11 +157,12 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string containing the nearest chunks with their original content and metadata.
         """
         ctx.log(f"[english_semantic_search] called with query={query!r}, filters={filters!r}")
-        result = await _knn_search(ctx.log, query, filters)
+        result = await _run_with_metrics("english_semantic_search", _knn_search, ctx.log, query, filters)
         ctx.log(f"[english_semantic_search] response size: {_payload_size(result)} bytes")
         return result
+    
+    mcp.tool(english_semantic_search)
 
-    @mcp.tool
     async def get_links_between_texts(ctx: Context, reference: str, with_text: str = "0") -> str:
         """
         Finds all cross-references and connections to a specific text passage.
@@ -141,11 +175,12 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with the links data.
         """
         ctx.log(f"[get_links_between_texts] called with reference={reference!r}, with_text={with_text!r}")
-        result = await _get_links(ctx.log, reference, with_text)
+        result = await _run_with_metrics("get_links_between_texts", _get_links, ctx.log, reference, with_text)
         ctx.log(f"[get_links_between_texts] response size: {_payload_size(result)} bytes")
         return result
+    
+    mcp.tool(get_links_between_texts)
 
-    @mcp.tool
     async def search_in_book(
         ctx: Context,
         query: str,
@@ -170,12 +205,13 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with search results.
         """
         ctx.log(f"[search_in_book] called with query={query!r}, book_name={book_name!r}, size={size!r}")
-        result = await _search_in_book(ctx.log, query, book_name, size)
+        result = await _run_with_metrics("search_in_book", _search_in_book, ctx.log, query, book_name, size)
         ctx.log(f"[search_in_book] response size: {_payload_size(result)} bytes")
         # Ensure we always return a string for MCP transport
         return result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+    
+    mcp.tool(search_in_book)
 
-    @mcp.tool
     async def search_in_dictionaries(ctx: Context, query: str) -> str:
         """
         Searches specifically within Jewish reference dictionaries.
@@ -193,16 +229,17 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with dictionary entries.
         """
         ctx.log(f"[search_in_dictionaries] called with query={query!r}")
-        result = await _search_in_dictionaries(ctx.log, query)
+        result = await _run_with_metrics("search_in_dictionaries", _search_in_dictionaries, ctx.log, query)
         ctx.log(f"[search_in_dictionaries] response size: {_payload_size(result)} bytes")
         # Ensure we always return a string for MCP transport
         return result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+    
+    mcp.tool(search_in_dictionaries)
 
     # -----------------------------
     # English translations
     # -----------------------------
 
-    @mcp.tool
     async def get_english_translations(ctx: Context, reference: str) -> str:
         """
         Retrieves all available English translations for a specific text reference.
@@ -214,9 +251,11 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with all English translations.
         """
         ctx.log(f"[get_english_translations] called with reference={reference!r}")
-        result = await _get_english_translations(ctx.log, reference)
+        result = await _run_with_metrics("get_english_translations", _get_english_translations, ctx.log, reference)
         ctx.log(f"[get_english_translations] response size: {_payload_size(result)} bytes")
         return result
+    
+    mcp.tool(get_english_translations)
 
 
 
@@ -225,7 +264,6 @@ def register_tools(mcp: FastMCP) -> None:
     # Topics
     # -----------------------------
 
-    @mcp.tool
     async def get_topic_details(
         ctx: Context,
         topic_slug: str,
@@ -244,11 +282,12 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with topic data.
         """
         ctx.log(f"[get_topic_details] called with topic_slug={topic_slug!r}, with_links={with_links!r}, with_refs={with_refs!r}")
-        result = await _get_topics(ctx.log, topic_slug, with_links, with_refs)
+        result = await _run_with_metrics("get_topic_details", _get_topics, ctx.log, topic_slug, with_links, with_refs)
         ctx.log(f"[get_topic_details] response size: {_payload_size(result)} bytes")
         return result
+    
+    mcp.tool(get_topic_details)
 
-    @mcp.tool
     async def clarify_name_argument(
         ctx: Context,
         name: str,
@@ -267,11 +306,12 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with name suggestions including authors, topics, and categories.
         """
         ctx.log(f"[clarify_name_argument] called with name={name!r}, limit={limit!r}, type_filter={type_filter!r}")
-        result = await _get_name(ctx.log, name, limit, type_filter)
+        result = await _run_with_metrics("clarify_name_argument", _get_name, ctx.log, name, limit, type_filter)
         ctx.log(f"[clarify_name_argument] response size: {_payload_size(result)} bytes")
         return result
+    
+    mcp.tool(clarify_name_argument)
 
-    @mcp.tool
     async def clarify_search_path_filter(ctx: Context, book_name: str) -> str:
         """
         Converts a book name into a proper search filter path.
@@ -283,13 +323,14 @@ def register_tools(mcp: FastMCP) -> None:
             The search filter path string.
         """
         ctx.log(f"[clarify_search_path_filter] called with book_name={book_name!r}")
-        result = await _get_search_path_filter(ctx.log, book_name)
+        result = await _run_with_metrics("clarify_search_path_filter", _get_search_path_filter, ctx.log, book_name)
         ctx.log(f"[clarify_search_path_filter] response size: {_payload_size(result)} bytes")
         # Ensure we always return a string for MCP transport
         return result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+    
+    mcp.tool(clarify_search_path_filter)
 
 
-    @mcp.tool
     async def get_text_or_category_shape(ctx: Context, name: str) -> str:
         """
         Retrieves the hierarchical structure and organization of texts or categories.
@@ -301,15 +342,16 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with the shape data.
         """
         ctx.log(f"[get_text_or_category_shape] called with name={name!r}")
-        result = await _get_text_or_category_shape(ctx.log, name)
+        result = await _run_with_metrics("get_text_or_category_shape", _get_text_or_category_shape, ctx.log, name)
         ctx.log(f"[get_text_or_category_shape] response size: {_payload_size(result)} bytes")
         return result
+    
+    mcp.tool(get_text_or_category_shape)
 
     # -----------------------------
     # Text Structure (moved to bottom)
     # -----------------------------
 
-    @mcp.tool
     async def get_text_catalogue_info(ctx: Context, title: str) -> str:
         """
         Retrieves the bibliographic and structural information (index) for a text or work.
@@ -321,15 +363,16 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with the index data.
         """
         ctx.log(f"[get_text_catalogue_info] called with title={title!r}")
-        result = await _get_index(ctx.log, title)
+        result = await _run_with_metrics("get_text_catalogue_info", _get_index, ctx.log, title)
         ctx.log(f"[get_text_catalogue_info] response size: {_payload_size(result)} bytes")
         return result
+    
+    mcp.tool(get_text_catalogue_info)
 
     # -----------------------------
     # Manuscript tools
     # -----------------------------
 
-    @mcp.tool
     async def get_available_manuscripts(ctx: Context, reference: str) -> str:
         """
         Retrieves historical manuscript metadata and image URLs for text passages.
@@ -341,11 +384,12 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string with manuscript metadata.
         """
         ctx.log(f"[get_available_manuscripts] called with reference={reference!r}")
-        result = await _get_available_manuscripts(ctx.log, reference)
+        result = await _run_with_metrics("get_available_manuscripts", _get_available_manuscripts, ctx.log, reference)
         ctx.log(f"[get_available_manuscripts] response size: {_payload_size(result)} bytes")
         return result
+    
+    mcp.tool(get_available_manuscripts)
 
-    @mcp.tool
     async def get_manuscript_image(
         ctx: Context,
         image_url: str,
@@ -362,7 +406,8 @@ def register_tools(mcp: FastMCP) -> None:
             JSON string containing the image data and metadata.
         """
         ctx.log(f"[get_manuscript_image] called with image_url={image_url!r}, manuscript_title={manuscript_title!r}")
-        result = await _get_manuscript_image(ctx.log, image_url, manuscript_title)
+        result = await _run_with_metrics("get_manuscript_image", _get_manuscript_image, ctx.log, image_url, manuscript_title)
         ctx.log(f"[get_manuscript_image] response size: {_payload_size(result)} bytes")
         return json.dumps(result, ensure_ascii=False)
-
+    
+    mcp.tool(get_manuscript_image)
