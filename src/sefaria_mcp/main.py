@@ -47,6 +47,11 @@ async def protected_resource_endpoint_sse(request: Request) -> JSONResponse:
 async def authorization_server_endpoint_sse(request: Request) -> JSONResponse:
     return JSONResponse({})
 
+@mcp.custom_route("/healthz", methods=["GET"])
+async def healthz_endpoint(request: Request) -> JSONResponse:
+    """Health check endpoint - returns 200 OK if server is responsive."""
+    return JSONResponse({"status": "ok"})
+
 # Get the FastMCP app - no need for custom wrapper
 app = mcp.http_app(transport="sse")
 app.router.redirect_slashes = False
