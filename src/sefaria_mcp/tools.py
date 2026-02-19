@@ -1,10 +1,7 @@
 from typing import List, Optional
 import json
-import logging
 import time
 from fastmcp import FastMCP, Context
-
-logger = logging.getLogger(__name__)
 
 from .logic import (
     get_text as _get_text,
@@ -55,8 +52,6 @@ def register_tools(mcp: FastMCP) -> None:
         start_time = time.time()
         status = "success"
         result = None
-        payload_size = None
-        error_type = None
         try:
             result = await func(*args, **kwargs)
             if _metrics:
@@ -65,28 +60,15 @@ def register_tools(mcp: FastMCP) -> None:
             return result
         except Exception as e:
             status = "error"
-            error_type = type(e).__name__
             if _metrics:
+                error_type = type(e).__name__
                 _metrics['errors'].labels(tool_name=tool_name, error_type=error_type).inc()
             raise
         finally:
-            duration = time.time() - start_time
             if _metrics:
+                duration = time.time() - start_time
                 _metrics['duration'].labels(tool_name=tool_name).observe(duration)
                 _metrics['calls'].labels(tool_name=tool_name, status=status).inc()
-            # Structured log - one JSON line per tool call
-            log_data = {
-                "event": "mcp_tool_usage",
-                "tool_name": tool_name,
-                "status": status,
-                "duration_seconds": round(duration, 4),
-            }
-            if payload_size is not None:
-                log_data["payload_bytes"] = payload_size
-            if error_type is not None:
-                log_data["error_type"] = error_type
-            log_level = logging.INFO if status == "success" else logging.WARNING
-            logger.log(log_level, json.dumps(log_data))
 
     # -----------------------------
     # Primary Tools (Top 4)
