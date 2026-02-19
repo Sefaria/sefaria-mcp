@@ -79,14 +79,26 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
 - All tool endpoints are available via the MCP protocol.
 
 ### Monitoring
-- Prometheus metrics are exposed via the standalone HTTP server started on `SEFARIA_MCP_METRICS_PORT` (defaults to `9090`).
-- Scrape `http://localhost:9090/` (or your configured host/port). Metrics include:
-  - `mcp_tool_calls_total{tool_name,status}` – call counts per tool and status.
-  - `mcp_tool_duration_seconds{tool_name}` – histogram of per-call durations.
-  - `mcp_tool_payload_bytes{tool_name}` – histogram of response payload sizes.
-  - `mcp_errors_total{tool_name,error_type}` – per-tool error counts.
-  - `mcp_active_connections` – current SSE connection gauge.
-  - Standard FastAPI instrumentation (request rate, latency, status codes, in-progress requests, etc.) from `prometheus_fastapi_instrumentator`.
+
+**Logs** (stdout, JSON per tool call):
+```json
+{"event": "mcp_tool_usage", "tool_name": "get_text", "status": "success", "duration_seconds": 0.1234, "payload_bytes": 1024}
+```
+
+**Metrics** (Prometheus, port `SEFARIA_MCP_METRICS_PORT` default 9090):
+- `mcp_tool_calls_total{tool_name,status}` – tool call counts
+- `mcp_tool_duration_seconds{tool_name}` – latency histogram (p95/p99)
+- `mcp_tool_payload_bytes{tool_name}` – response size histogram
+- `mcp_errors_total{tool_name,error_type}` – error counts
+- `mcp_active_connections` – SSE connection gauge
+- `http_requests_total`, `http_request_duration_seconds` – FastAPI HTTP metrics
+
+**Grafana dashboard**: Import `dashboards/sefaria-mcp-dashboard.json`. Includes:
+- Summary stats (calls/min, error rate, success rate, p95)
+- Usage per tool over time
+- HTTP request rate and latency (FastAPI)
+- Tool calls, errors, latency, payload size tables
+
 
 ## Commit Hygiene
 
