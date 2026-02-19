@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 
 from fastmcp import FastMCP
 from prometheus_client import start_http_server, Counter, Histogram, Gauge
@@ -58,6 +59,22 @@ app.router.redirect_slashes = False
 
 logger = logging.getLogger(__name__)
 
+
+def _configure_logging() -> None:
+    """Configure logging for MCP usage. Structured JSON logs go to stdout for Prometheus/Loki correlation."""
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    if not root.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.INFO)
+        # Timestamp + level; message contains JSON for mcp_tool_usage
+        handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+        root.addHandler(handler)
+    # Reduce noise from third-party loggers
+    logging.getLogger("uvicorn").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+
 # Expose Prometheus metrics for MCP health and usage monitoring
 instrumentator = Instrumentator(
     should_group_status_codes=True,
@@ -76,7 +93,8 @@ mcp_tool_calls_total = Counter(
 mcp_tool_duration_seconds = Histogram(
     'mcp_tool_duration_seconds',
     'Duration of MCP tool calls in seconds',
-    ['tool_name']
+    ['tool_name'],
+    buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5]  # Enables accurate p95/p99
 )
 
 mcp_tool_payload_bytes = Histogram(
@@ -109,7 +127,8 @@ set_metrics(metrics_dict)
 
 def start_metrics_server() -> None:
     """Start the Prometheus metrics endpoint without crashing if the port is busy."""
-    metrics_port = 9090
+    # SEFARIA_MCP_PORT = app (SSE) port; SEFARIA_MCP_METRICS_PORT = metrics scrape port
+    metrics_port = int(os.environ.get("SEFARIA_MCP_METRICS_PORT", "9090"))
     try:
         start_http_server(metrics_port)
     except OSError as exc:
@@ -117,8 +136,9 @@ def start_metrics_server() -> None:
 
 
 def main() -> None:  # pragma: no cover – simple wrapper for console_scripts
+    _configure_logging()
     start_metrics_server()
-    mcp.run(transport="sse", path="/sse", host="0.0.0.0", port=8088)
+    mcp.run(transport="sse", path="/sse", host="0.0.0.0", port=int(os.environ.get("SEFARIA_MCP_PORT", "8088")))
 
 if __name__ == "__main__":
     main()
