@@ -828,36 +828,64 @@ async def get_manuscript_image(logger, image_url: str, manuscript_title: str = N
             "error": f"Error processing manuscript image: {str(e)}"
         }
 
+# Fallback mapping for category-level names that Sefaria's search-path-filter
+# API does not support (it only handles individual book/text names, not categories).
+CATEGORY_PATH_FALLBACKS = {
+    "midrash rabbah": "Midrash/Aggadah/Midrash Rabbah",
+    "midrash": "Midrash",
+    "talmud": "Talmud",
+    "bavli": "Talmud/Bavli",
+    "yerushalmi": "Talmud/Yerushalmi",
+    "tanakh": "Tanakh",
+    "torah": "Tanakh/Torah",
+    "prophets": "Tanakh/Prophets",
+    "writings": "Tanakh/Writings",
+    "mishnah": "Mishnah",
+    "halakhah": "Halakhah",
+    "kabbalah": "Kabbalah",
+    "midrash aggadah": "Midrash/Aggadah",
+    "midrash halakhah": "Midrash/Halakhah",
+}
+
+
 async def get_search_path_filter(logger, book_name: str) -> str:
     """
     Converts a book name into a valid search filter path using Sefaria's search-path-filter API.
-    
+    Falls back to a built-in category mapping when the API does not support the given name.
+
     Args:
         book_name (str): The name of the book to convert to a search filter path
-        
+
     Returns:
         str: The search filter path string, or None if the conversion failed
     """
     logger = _ensure_logger(logger)
+
+    # Check the category fallback mapping first for known category-level names
+    fallback = CATEGORY_PATH_FALLBACKS.get(book_name.strip().lower())
+    if fallback:
+        logger.debug(f"Using category fallback path for '{book_name}': {fallback}")
+        return fallback
+
     try:
         # URL encode the book name
         encoded_name = urllib.parse.quote(book_name)
-        
+
         # Build the URL
         url = f"{SEFARIA_API_BASE_URL}/api/search-path-filter/{encoded_name}"
-            
+
         logger.debug(f"Search path filter API request URL: {url}")
-        
+
         # Make the request
         response = requests.get(url)
         response.raise_for_status()
-        
+
         # The response is just a string, not JSON
         filter_path = response.text.strip()
         logger.debug(f"Search path filter response: {filter_path}")
-        
+
         return filter_path
-    
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Error during search path filter API request: {str(e)}")
         return None
