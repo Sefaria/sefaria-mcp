@@ -75,9 +75,13 @@ def get_parasha_data():
     print("Could not retrieve Parasha data.")
     return None, None
 
-async def get_situational_info(logger):
+async def get_situational_info(logger, diaspora: bool = True):
     """
     Returns situational information related to the Jewish calendar.
+
+    Args:
+        diaspora: Whether to use the Diaspora Torah reading schedule. Set to
+            False for the Israeli schedule when the two diverge.
     
     Returns:
         str: JSON string containing:
@@ -93,9 +97,10 @@ async def get_situational_info(logger):
         now = datetime.datetime.now()
         h = hdate.HDateInfo(now)  # Includes day of week
         
-        # Get extended calendar information from Sefaria
-        # Note: This will retrieve the Israel Parasha when Israel and diaspora differ
-        calendar_data = get_request_json_data("api/calendars")
+        # Get extended calendar information from Sefaria.
+        # diaspora=1 returns Diaspora readings; diaspora=0 returns Israel readings.
+        diaspora_param = "diaspora=1" if diaspora else "diaspora=0"
+        calendar_data = get_request_json_data("api/calendars", param=diaspora_param)
         
         if not calendar_data:
             return json.dumps({

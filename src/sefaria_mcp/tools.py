@@ -123,10 +123,16 @@ def register_tools(mcp: FastMCP) -> None:
     
     mcp.tool(text_search)
 
-    async def get_current_calendar(ctx: Context) -> str:
-        """Provides current Jewish calendar information including Hebrew date, parasha, holidays, etc."""
-        ctx.log("[get_current_calendar] called")
-        result = await _run_with_metrics("get_current_calendar", _get_situational_info, ctx.log)
+    async def get_current_calendar(ctx: Context, diaspora: bool = True) -> str:
+        """
+        Provides current Jewish calendar information including Hebrew date, parasha, holidays, etc.
+
+        Args:
+            diaspora: Use the Diaspora Torah reading schedule when True. Set to False for
+                the Israeli schedule when Israel and Diaspora readings diverge.
+        """
+        ctx.log(f"[get_current_calendar] called with diaspora={diaspora!r}")
+        result = await _run_with_metrics("get_current_calendar", _get_situational_info, ctx.log, diaspora)
         ctx.log(f"[get_current_calendar] response size: {_payload_size(result)} bytes")
         return result
     
