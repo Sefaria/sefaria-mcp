@@ -7,7 +7,6 @@ from .logic import (
     get_text as _get_text,
     search_texts as _search_texts,
     get_situational_info as _get_situational_info,
-    knn_search as _knn_search,
     get_english_translations as _get_english_translations,
     get_links as _get_links,
     get_name as _get_name,
@@ -137,37 +136,6 @@ def register_tools(mcp: FastMCP) -> None:
         return result
     
     mcp.tool(get_current_calendar)
-
-    async def english_semantic_search(ctx: Context, query: str, filters: Optional[dict] = None) -> str:
-        """
-        Performs semantic similarity search on English embeddings of texts from Sefaria.
-        
-        This tool uses semantic similarity to find text chunks that are conceptually 
-        related to your query, even if they don't contain the exact same words.  Through this 
-        you can discover texts that traditional keyword search or link search might miss
-        
-        SEARCH TIPS:
-        - This database is encoded from English.  Works well only with English queries
-        - Search for phrases and sentences close to what you want to find.  Query for something close to the answer, not the question.
-
-        Args:
-            query: The search query to find semantically similar text chunks.
-            filters: Optional metadata filters to apply to the search. Can include:
-                - document_categories: List of document types (e.g., ["Mishnah", "Talmud"]). Use get_name to validate category names.
-                - authors: List of author names (e.g., ["Rashi", "Rambam"]). Use get_name to validate author names.
-                - eras: List of historical periods. Valid values: "Tannaim", "Amoraim", "Geonim", "Rishonim", "Acharonim", "Contemporary"
-                - topics: List of topics (e.g., ["halakhah", "aggadah"]). Use get_name to validate topic names.
-                - places: List of composition places (e.g., ["Jerusalem", "Babylon"])
-            
-        Returns:
-            JSON string containing the nearest chunks with their original content and metadata.
-        """
-        ctx.log(f"[english_semantic_search] called with query={query!r}, filters={filters!r}")
-        result = await _run_with_metrics("english_semantic_search", _knn_search, ctx.log, query, filters)
-        ctx.log(f"[english_semantic_search] response size: {_payload_size(result)} bytes")
-        return result
-    
-    mcp.tool(english_semantic_search)
 
     async def get_links_between_texts(ctx: Context, reference: str, with_text: str = "0") -> str:
         """

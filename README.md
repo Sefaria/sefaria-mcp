@@ -4,13 +4,12 @@ A modern [MCP (Model Context Protocol)](https://github.com/ai21labs/model-contex
 
 ## What does this server do?
 
-This server exposes the Sefaria Jewish library as a set of 15 MCP tools, allowing LLMs and other MCP clients to:
+This server exposes the Sefaria Jewish library as a set of 14 MCP tools, allowing LLMs and other MCP clients to:
 
 **Primary Tools:**
 - **get_text** - Retrieve Jewish texts by reference (e.g., "Genesis 1:1")
 - **text_search** - Search across the entire Jewish library
 - **get_current_calendar** - Get situational Jewish calendar information. Accepts `diaspora` (`true` for Diaspora, `false` for Israel) for weeks when Torah reading schedules diverge.
-- **english_semantic_search** - Semantic similarity search on English text embeddings (Currently only works from official Sefaria MCP)
 
 **Core Tools:**
 - **get_links_between_texts** - Find cross-references and connections between texts
