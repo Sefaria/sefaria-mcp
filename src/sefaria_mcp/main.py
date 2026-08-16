@@ -22,30 +22,13 @@ metrics_dict = {
 
 register_tools(mcp)
 
-# ---- WELL-KNOWN METADATA (no-auth stubs) ----
-PROTECTED_RESOURCE_DOC = {
-    # Use your actual origin, no trailing slash:
-    "resource": "https://devmcp.sefaria.org",
-    "authorization_servers": []  # <- explicitly none
-}
-
-# Add well-known OAuth endpoints using FastMCP's custom route decorator
-@mcp.custom_route("/.well-known/oauth-protected-resource", methods=["GET"])
-async def protected_resource_endpoint(request: Request) -> JSONResponse:
-    return JSONResponse(PROTECTED_RESOURCE_DOC)
-
-@mcp.custom_route("/.well-known/oauth-authorization-server", methods=["GET"])
-async def authorization_server_endpoint(request: Request) -> JSONResponse:
-    return JSONResponse({})
-
-# Defensive variants for clients that (incorrectly) append your path:
-@mcp.custom_route("/.well-known/oauth-protected-resource/sse", methods=["GET"])
-async def protected_resource_endpoint_sse(request: Request) -> JSONResponse:
-    return JSONResponse(PROTECTED_RESOURCE_DOC)
-
-@mcp.custom_route("/.well-known/oauth-authorization-server/sse", methods=["GET"])
-async def authorization_server_endpoint_sse(request: Request) -> JSONResponse:
-    return JSONResponse({})
+# ---- WELL-KNOWN METADATA ----
+# This server is authless, so the OAuth discovery documents must be *absent*, not empty.
+# Clients treat a 200 on /.well-known/oauth-protected-resource or
+# /.well-known/oauth-authorization-server as authoritative proof that the server is
+# OAuth-protected, and then fail because there is no authorization server to talk to.
+# A 404 is the signal for "no authorization required" and lets clients connect directly.
+# If auth is ever added here, serve fully populated documents - never empty stubs.
 
 @mcp.custom_route("/healthz", methods=["GET"])
 async def healthz_endpoint(request: Request) -> JSONResponse:
