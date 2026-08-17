@@ -113,6 +113,7 @@ jobs:
       - name: Deploy
         run: |
           curl \
+          --fail-with-body \
           -X POST \
           -H "Accept: application/vnd.github.v3+json" \
           -H "Authorization: Bearer ${{ secrets.API_TOKEN }}" \
