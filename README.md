@@ -52,8 +52,11 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     ```bash
     python -m sefaria_mcp.main
     ```
-    The server will be available at `http://127.0.0.1:8088/sse` by default.
-    Set `SEFARIA_MCP_PORT` to override the SSE/API port (e.g., `SEFARIA_MCP_PORT=8089 python -m sefaria_mcp.main`).
+    The server listens on `http://127.0.0.1:8088` by default and serves both MCP HTTP transports:
+    - `http://127.0.0.1:8088/mcp` — Streamable HTTP (**recommended**)
+    - `http://127.0.0.1:8088/sse` — HTTP+SSE (legacy compatibility)
+
+    Set `SEFARIA_MCP_PORT` to override the MCP port (e.g., `SEFARIA_MCP_PORT=8089 python -m sefaria_mcp.main`).
     Prometheus metrics bind separately on `SEFARIA_MCP_METRICS_PORT` (default `9090`).
 
 ### Docker
@@ -71,10 +74,12 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
         -p 9090:9090 \
         sefaria-mcp
     ```
-    The server will be available at `http://localhost:8089/sse` and metrics at `http://localhost:9090/` (adjust the port mappings as needed).
+    The server will be available at `http://localhost:8089/mcp` (recommended) and `http://localhost:8089/sse` (legacy), with metrics at `http://localhost:9090/` (adjust the port mappings as needed).
 
 ### Usage
-- Connect your MCP-compatible client to the `/sse` endpoint.
+- Connect new MCP clients to the Streamable HTTP `/mcp` endpoint.
+- The legacy `/sse` endpoint remains available during migration for already-configured clients. It serves the same tools from the same FastMCP server.
+- Host/Origin validation is enabled for Streamable HTTP. The defaults allow loopback plus `mcp.sefaria.org` and `devmcp.sefaria.org`. Self-hosted deployments can override the comma-separated allowlists with `SEFARIA_MCP_ALLOWED_HOSTS` and `SEFARIA_MCP_ALLOWED_ORIGINS`.
 - All tool endpoints are available via the MCP protocol.
 
 ### Monitoring
@@ -84,7 +89,7 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
   - `mcp_tool_duration_seconds{tool_name}` – histogram of per-call durations.
   - `mcp_tool_payload_bytes{tool_name}` – histogram of response payload sizes.
   - `mcp_errors_total{tool_name,error_type}` – per-tool error counts.
-  - `mcp_active_connections` – current SSE connection gauge.
+  - `mcp_active_connections` – current MCP connection gauge.
   - Standard FastAPI instrumentation (request rate, latency, status codes, in-progress requests, etc.) from `prometheus_fastapi_instrumentator`.
 
 ## Commit Hygiene
