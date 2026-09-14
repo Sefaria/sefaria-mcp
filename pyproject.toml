@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [
-    "fastmcp",
+    "fastmcp>=4.0.3,<5",
     "hdate",
     "requests",
     "pillow",

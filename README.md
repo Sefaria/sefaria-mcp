@@ -52,9 +52,24 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
     ```bash
     python -m sefaria_mcp.main
     ```
-    The server will be available at `http://127.0.0.1:8088/sse` by default.
-    Set `SEFARIA_MCP_PORT` to override the SSE/API port (e.g., `SEFARIA_MCP_PORT=8089 python -m sefaria_mcp.main`).
+    The server will be available at `http://127.0.0.1:8088/mcp` by default, with the
+    legacy SSE endpoint at `http://127.0.0.1:8088/sse`.
+    Set `SEFARIA_MCP_PORT` to override the HTTP port (e.g., `SEFARIA_MCP_PORT=8089 python -m sefaria_mcp.main`).
     Prometheus metrics bind separately on `SEFARIA_MCP_METRICS_PORT` (default `9090`).
+
+### Configuration
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `SEFARIA_MCP_HOST` | `0.0.0.0` | Interface the HTTP server binds to |
+| `SEFARIA_MCP_PORT` | `8088` | Port serving both `/mcp` and `/sse` |
+| `SEFARIA_MCP_METRICS_PORT` | `9090` | Port for the Prometheus metrics server |
+| `SEFARIA_MCP_ALLOWED_HOSTS` | `mcp.sefaria.org,devmcp.sefaria.org` | Comma-separated `Host` values accepted on `/mcp` |
+| `SEFARIA_MCP_ALLOWED_ORIGINS` | `https://mcp.sefaria.org,https://devmcp.sefaria.org` | Comma-separated browser `Origin` values accepted on `/mcp` |
+| `SEFARIA_MCP_HOST_PROTECTION` | `on` | Set to `off` to disable Host/Origin validation |
+
+Loopback hosts (`127.0.0.1`, `localhost`, `::1`) are always accepted, so local
+development needs no extra configuration.
 
 ### Docker
 
@@ -71,11 +86,29 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
         -p 9090:9090 \
         sefaria-mcp
     ```
-    The server will be available at `http://localhost:8089/sse` and metrics at `http://localhost:9090/` (adjust the port mappings as needed).
+    The server will be available at `http://localhost:8089/mcp` (and `http://localhost:8089/sse`), with metrics at `http://localhost:9090/` (adjust the port mappings as needed).
 
-### Usage
-- Connect your MCP-compatible client to the `/sse` endpoint.
-- All tool endpoints are available via the MCP protocol.
+### Transports
+
+The server speaks two MCP transports on the same port. Both expose the identical
+set of tools.
+
+| Path | Transport | Status |
+|------|-----------|--------|
+| `/mcp` | Streamable HTTP | **Primary.** Use this for new clients. |
+| `/sse` | HTTP+SSE | Legacy. Kept for backward compatibility; prefer `/mcp`. |
+
+Point your MCP-compatible client at `https://mcp.sefaria.org/mcp`. Clients that
+only speak the older SSE transport can continue to use `https://mcp.sefaria.org/sse`,
+but new integrations should not depend on it.
+
+`/mcp` runs in stateless mode: every request carries its own transport, so no
+session state is held between calls. It therefore accepts `POST` and `DELETE`
+only, and returns `405` for `GET` (there is no server-initiated notification
+stream to open). Requests to `/mcp` are checked against `SEFARIA_MCP_ALLOWED_HOSTS`
+and `SEFARIA_MCP_ALLOWED_ORIGINS`, as the Streamable HTTP spec requires for
+DNS-rebinding protection; a mismatched `Host` gets `421` and a mismatched
+`Origin` gets `403`. The legacy `/sse` endpoint is not host-checked.
 
 ### Monitoring
 - Prometheus metrics are exposed via the standalone HTTP server started on `SEFARIA_MCP_METRICS_PORT` (defaults to `9090`).
@@ -84,7 +117,7 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
   - `mcp_tool_duration_seconds{tool_name}` – histogram of per-call durations.
   - `mcp_tool_payload_bytes{tool_name}` – histogram of response payload sizes.
   - `mcp_errors_total{tool_name,error_type}` – per-tool error counts.
-  - `mcp_active_connections` – current SSE connection gauge.
+  - `mcp_active_connections` – current SSE connection gauge (legacy `/sse` transport only).
   - Standard FastAPI instrumentation (request rate, latency, status codes, in-progress requests, etc.) from `prometheus_fastapi_instrumentator`.
 
 ## Commit Hygiene
