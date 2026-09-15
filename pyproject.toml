@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [
-    "fastmcp",
+    "fastmcp>=4.0.3,<5",
     "hdate",
     "requests",
     "pillow",
@@ -21,5 +21,11 @@ dependencies = [
     "prometheus-client"
 ]
 
+[project.optional-dependencies]
+dev = ["pytest", "httpx"]
+
 [project.scripts]
-sefaria-mcp = "sefaria_mcp.main:main" 
+sefaria-mcp = "sefaria_mcp.main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"] 
