@@ -21,5 +21,11 @@ dependencies = [
     "prometheus-client"
 ]
 
+[project.optional-dependencies]
+dev = ["pytest", "httpx"]
+
 [project.scripts]
-sefaria-mcp = "sefaria_mcp.main:main" 
+sefaria-mcp = "sefaria_mcp.main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"] 
