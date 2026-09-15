@@ -42,11 +42,19 @@ def _env_int(name: str, default: int) -> int:
 
 
 def _env_list(name: str, default: list[str]) -> list[str]:
-    """Read a comma-separated list from the environment."""
+    """Read a comma-separated list from the environment, falling back if unset or empty.
+
+    An empty value must fall back rather than yield []: FastMCP treats an explicit
+    allowlist as authoritative, so [] would make /mcp loopback-only and reject
+    every real request with 421. A blank ConfigMap value is an easy way to get here.
+    """
     raw = os.environ.get(name)
-    if raw is None:
+    items = [item.strip() for item in raw.split(",") if item.strip()] if raw else []
+    if not items:
+        if raw:
+            logger.warning("Ignoring empty %s=%r; using %s", name, raw, default)
         return default
-    return [item.strip() for item in raw.split(",") if item.strip()]
+    return items
 
 
 HOST = os.environ.get("SEFARIA_MCP_HOST", "0.0.0.0")
@@ -72,6 +80,8 @@ ALLOWED_ORIGINS = _env_list(
 # Escape hatch: set SEFARIA_MCP_HOST_PROTECTION=off to disable the guard without a
 # redeploy if an unanticipated Host header turns out to be legitimate in-cluster.
 HOST_PROTECTION = os.environ.get("SEFARIA_MCP_HOST_PROTECTION", "on").lower() != "off"
+if not HOST_PROTECTION:
+    logger.warning("SEFARIA_MCP_HOST_PROTECTION=off: /mcp will accept any Host and Origin header")
 
 # ---- WELL-KNOWN METADATA (no-auth stubs) ----
 # These empty 200s are deliberate and load-bearing: claude.ai's connector broker
