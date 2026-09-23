@@ -1,9 +1,10 @@
 """The User-Agent sefaria-mcp presents to the Sefaria API.
 
 The default names only the software, because this project is open source and
-self-hosted by third parties. Sefaria's own deployment opts into the first-party
-marker with SEFARIA_MCP_FIRST_PARTY=1. No network: outbound calls are captured
-by a transport adapter mounted on the module-level session.
+self-hosted by third parties. Sefaria's own deployments opt into the first-party
+marker, with the environment name, via SEFARIA_MCP_DEPLOYMENT=prod|dev. No
+network: outbound calls are captured by a transport adapter mounted on the
+module-level session.
 """
 import asyncio
 import json
@@ -66,29 +67,34 @@ def test_post_sends_user_agent_alongside_per_call_headers(captured):
 # ---- what the header says ----
 
 def test_default_names_only_the_software(monkeypatch):
-    monkeypatch.delenv("SEFARIA_MCP_FIRST_PARTY", raising=False)
+    monkeypatch.delenv("SEFARIA_MCP_DEPLOYMENT", raising=False)
     assert logic.configured_user_agent() == "sefaria-mcp"
 
 
-@pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", " Yes "])
-def test_first_party_marker_is_opt_in(monkeypatch, value):
-    monkeypatch.setenv("SEFARIA_MCP_FIRST_PARTY", value)
-    assert logic.configured_user_agent() == "Sefaria/sefaria-mcp"
-
-
-@pytest.mark.parametrize("value", ["", "0", "false", "no", "junk"])
-def test_first_party_marker_needs_a_truthy_value(monkeypatch, value):
-    monkeypatch.setenv("SEFARIA_MCP_FIRST_PARTY", value)
+@pytest.mark.parametrize("value", ["", "   ", "()", "\n"])
+def test_blank_deployment_is_treated_as_unset(monkeypatch, value):
+    monkeypatch.setenv("SEFARIA_MCP_DEPLOYMENT", value)
     assert logic.configured_user_agent() == "sefaria-mcp"
+
+
+@pytest.mark.parametrize("value, expected", [
+    ("prod", "Sefaria/sefaria-mcp (prod)"),
+    ("dev", "Sefaria/sefaria-mcp (dev)"),
+    ("  prod  ", "Sefaria/sefaria-mcp (prod)"),
+    ("pro(d)\n", "Sefaria/sefaria-mcp (prod)"),
+])
+def test_deployment_name_marks_first_party_traffic(monkeypatch, value, expected):
+    monkeypatch.setenv("SEFARIA_MCP_DEPLOYMENT", value)
+    assert logic.configured_user_agent() == expected
 
 
 def test_version_is_included_only_when_known():
-    assert logic.build_user_agent(False, "1.8.0") == "sefaria-mcp/1.8.0"
-    assert logic.build_user_agent(True, "1.8.0") == "Sefaria/sefaria-mcp (1.8.0)"
-    assert logic.build_user_agent(False, None) == "sefaria-mcp"
-    assert logic.build_user_agent(True, None) == "Sefaria/sefaria-mcp"
+    assert logic.build_user_agent(None, "1.8.0") == "sefaria-mcp/1.8.0"
+    assert logic.build_user_agent("prod", "1.8.0") == "Sefaria/sefaria-mcp (prod; 1.8.0)"
+    assert logic.build_user_agent(None, None) == "sefaria-mcp"
+    assert logic.build_user_agent("prod", None) == "Sefaria/sefaria-mcp (prod)"
 
 
 def test_no_stray_url_comment():
-    for ua in (logic.build_user_agent(False), logic.build_user_agent(True)):
+    for ua in (logic.build_user_agent(None), logic.build_user_agent("prod")):
         assert "http" not in ua and "+" not in ua
