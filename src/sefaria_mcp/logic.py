@@ -23,38 +23,14 @@ else:
     SEFARIA_AI_BASE_URL = os.getenv("SEFARIA_AI_BASE_URL", "https://ai.sefaria.org")
 
 
-def _deployment_from_env() -> str | None:
-    """SEFARIA_MCP_DEPLOYMENT with characters that would break the User-Agent
-    comment syntax removed; None when unset or blank."""
-    raw = os.getenv("SEFARIA_MCP_DEPLOYMENT", "")
-    cleaned = re.sub(r"[()\r\n]", "", raw).strip()
-    return cleaned or None
+def _user_agent() -> str:
+    # The "Sefaria/" prefix is opt-in via SEFARIA_MCP_DEPLOYMENT because third
+    # parties self-host this server and must not present themselves as Sefaria.
+    deployment = re.sub(r"[()\r\n]", "", os.environ.get("SEFARIA_MCP_DEPLOYMENT", "")).strip()
+    return f"Sefaria/sefaria-mcp ({deployment})" if deployment else "sefaria-mcp"
 
 
-def build_user_agent(deployment: str | None, version: str | None = None) -> str:
-    """The User-Agent this server sends to Sefaria's APIs.
-
-    The ``Sefaria/`` prefix is opt-in because third parties self-host this
-    server and their copies must not present themselves as Sefaria. Only the
-    operator knows, so it comes from ``SEFARIA_MCP_DEPLOYMENT``, e.g.
-    ``Sefaria/sefaria-mcp (prod)``; the default is plain ``sefaria-mcp``.
-    """
-    if deployment:
-        comment = f"{deployment}; {version}" if version else deployment
-        return f"Sefaria/sefaria-mcp ({comment})"
-    return f"sefaria-mcp/{version}" if version else "sefaria-mcp"
-
-
-def configured_user_agent() -> str:
-    """The User-Agent for this process.
-
-    No version is passed: the release tag is never written into the package
-    or the image, so none is known at runtime.
-    """
-    return build_user_agent(_deployment_from_env())
-
-
-USER_AGENT = configured_user_agent()
+USER_AGENT = _user_agent()
 
 http_session = requests.Session()
 http_session.headers["User-Agent"] = USER_AGENT
