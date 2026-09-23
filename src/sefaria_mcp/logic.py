@@ -21,11 +21,41 @@ if virtual_havruta_host and virtual_havruta_port:
 else:
     SEFARIA_AI_BASE_URL = os.getenv("SEFARIA_AI_BASE_URL", "https://ai.sefaria.org")
 
-# Identifies this server to Sefaria's own APIs (API Key Program, Phase 0).
-SEFARIA_USER_AGENT = "Sefaria/sefaria-mcp (+https://github.com/Sefaria/sefaria-mcp)"
+
+def _env_truthy(name: str) -> bool:
+    """True when the environment variable is set to 1/true/yes (case-insensitive)."""
+    return os.getenv(name, "").strip().lower() in ("1", "true", "yes")
+
+
+def build_user_agent(first_party: bool, version: str | None = None) -> str:
+    """Build the User-Agent this server sends to Sefaria's APIs.
+
+    The header names the *software* by default (``sefaria-mcp``): this project is
+    open source and self-hosted by third parties, whose copies must not present
+    themselves as Sefaria. Only the *operator* knows whether a deployment is
+    Sefaria's own, so the first-party ``Sefaria/`` marker is opted into via
+    deployment config (see ``SEFARIA_MCP_FIRST_PARTY``), never hardcoded.
+    """
+    if first_party:
+        return f"Sefaria/sefaria-mcp ({version})" if version else "Sefaria/sefaria-mcp"
+    return f"sefaria-mcp/{version}" if version else "sefaria-mcp"
+
+
+def configured_user_agent() -> str:
+    """The User-Agent for this process, derived from the environment.
+
+    No release version is included: pyproject.toml is pinned at 0.1.0 and the
+    semantic-release tag is never written into the package or the image, so
+    there is nothing truthful to report at runtime.
+    """
+    return build_user_agent(_env_truthy("SEFARIA_MCP_FIRST_PARTY"))
+
+
+# Identifies this server to Sefaria's APIs (API Key Program, Phase 0).
+USER_AGENT = configured_user_agent()
 
 http_session = requests.Session()
-http_session.headers["User-Agent"] = SEFARIA_USER_AGENT
+http_session.headers["User-Agent"] = USER_AGENT
 
 
 # Maximum image size in bytes (1MB)
