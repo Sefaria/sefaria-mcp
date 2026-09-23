@@ -1,9 +1,6 @@
-"""The User-Agent sefaria-mcp presents to the Sefaria API.
+"""The User-Agent sefaria-mcp sends to the Sefaria API.
 
-The default names only the software, because this project is open source and
-self-hosted by third parties. Sefaria's own deployments opt into the first-party
-marker, with the environment name, via SEFARIA_MCP_DEPLOYMENT=prod|dev. No
-network: outbound calls are captured by a transport adapter mounted on the
+No network: outbound calls are captured by a transport adapter mounted on the
 module-level session.
 """
 import asyncio
@@ -46,8 +43,6 @@ def captured(monkeypatch):
     return adapter
 
 
-# ---- the header actually goes out, on GET and on POST ----
-
 def test_get_sends_user_agent(captured):
     logic.get_request_json_data("api/texts/", "Genesis 1:1")
     (req,) = captured.requests
@@ -63,8 +58,6 @@ def test_post_sends_user_agent_alongside_per_call_headers(captured):
     # The per-call header must merge over the session default, not replace it.
     assert req.headers["Content-Type"] == "application/json"
 
-
-# ---- what the header says ----
 
 def test_default_names_only_the_software(monkeypatch):
     monkeypatch.delenv("SEFARIA_MCP_DEPLOYMENT", raising=False)

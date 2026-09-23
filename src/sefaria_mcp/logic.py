@@ -24,25 +24,20 @@ else:
 
 
 def _deployment_from_env() -> str | None:
-    """The deployment name from SEFARIA_MCP_DEPLOYMENT, or None when unset/blank.
-
-    Characters that would break the User-Agent comment syntax are removed.
-    """
+    """SEFARIA_MCP_DEPLOYMENT with characters that would break the User-Agent
+    comment syntax removed; None when unset or blank."""
     raw = os.getenv("SEFARIA_MCP_DEPLOYMENT", "")
     cleaned = re.sub(r"[()\r\n]", "", raw).strip()
     return cleaned or None
 
 
 def build_user_agent(deployment: str | None, version: str | None = None) -> str:
-    """Build the User-Agent this server sends to Sefaria's APIs.
+    """The User-Agent this server sends to Sefaria's APIs.
 
-    The header names the *software* by default (``sefaria-mcp``): this project is
-    open source and self-hosted by third parties, whose copies must not present
-    themselves as Sefaria. Only the *operator* knows whether a deployment is
-    Sefaria's own, so the first-party ``Sefaria/`` marker is opted into via
-    deployment config (``SEFARIA_MCP_DEPLOYMENT=prod``), never hardcoded. The
-    environment name goes in the comment so prod and dev traffic can be told
-    apart in the logs, e.g. ``Sefaria/sefaria-mcp (prod)``.
+    The ``Sefaria/`` prefix is opt-in because third parties self-host this
+    server and their copies must not present themselves as Sefaria. Only the
+    operator knows, so it comes from ``SEFARIA_MCP_DEPLOYMENT``, e.g.
+    ``Sefaria/sefaria-mcp (prod)``; the default is plain ``sefaria-mcp``.
     """
     if deployment:
         comment = f"{deployment}; {version}" if version else deployment
@@ -51,16 +46,14 @@ def build_user_agent(deployment: str | None, version: str | None = None) -> str:
 
 
 def configured_user_agent() -> str:
-    """The User-Agent for this process, derived from the environment.
+    """The User-Agent for this process.
 
-    No release version is included: pyproject.toml is pinned at 0.1.0 and the
-    semantic-release tag is never written into the package or the image, so
-    there is nothing truthful to report at runtime.
+    No version is passed: the release tag is never written into the package
+    or the image, so none is known at runtime.
     """
     return build_user_agent(_deployment_from_env())
 
 
-# Identifies this server to Sefaria's APIs (API Key Program, Phase 0).
 USER_AGENT = configured_user_agent()
 
 http_session = requests.Session()
