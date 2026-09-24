@@ -373,7 +373,7 @@ def register_tools(mcp: FastMCP) -> None:
         Downloads and returns a specific manuscript image from a given image URL.
 
         Args:
-            image_url: The URL of the manuscript image to download.
+            image_url: The URL of the manuscript image to download, as returned by get_available_manuscripts.
             manuscript_title: Title or description for the manuscript.
 
         Returns:

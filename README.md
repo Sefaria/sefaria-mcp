@@ -64,6 +64,7 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
 | `SEFARIA_MCP_HOST` | `0.0.0.0` | Interface the HTTP server binds to |
 | `SEFARIA_MCP_PORT` | `8088` | Port serving both `/mcp` and `/sse` |
 | `SEFARIA_MCP_METRICS_PORT` | `9090` | Port for the Prometheus metrics server |
+| `SEFARIA_MCP_MANUSCRIPT_IMAGE_HOSTS` | `manuscripts.sefaria.org` | Comma-separated hosts `get_manuscript_image` may fetch from (https only) |
 | `SEFARIA_MCP_ALLOWED_HOSTS` | `mcp.sefaria.org,devmcp.sefaria.org` | Comma-separated `Host` values accepted on `/mcp` |
 | `SEFARIA_MCP_ALLOWED_ORIGINS` | `https://mcp.sefaria.org,https://devmcp.sefaria.org` | Comma-separated browser `Origin` values accepted on `/mcp` |
 | `SEFARIA_MCP_HOST_PROTECTION` | `on` | Set to `off` to disable Host/Origin validation |
