@@ -702,6 +702,70 @@ async def get_available_manuscripts(logger, reference: str) -> str:
     except requests.exceptions.RequestException as e:
         return f"Error during manuscripts API request: {str(e)}"
 
+MANUSCRIPT_IMAGE_HOSTS = frozenset(
+    host.strip().lower()
+    for host in os.getenv("SEFARIA_MCP_MANUSCRIPT_IMAGE_HOSTS", "manuscripts.sefaria.org").split(",")
+    if host.strip()
+)
+MAX_MANUSCRIPT_DOWNLOAD_SIZE = 20 * 1024 * 1024
+MAX_MANUSCRIPT_REDIRECTS = 3
+
+
+class ManuscriptImageRejected(Exception):
+    """The image URL or the response it produced is not one this server will fetch."""
+
+
+def _validate_manuscript_image_url(url: str) -> None:
+    # image_url comes from the MCP caller, so only Sefaria's manuscript hosts may be fetched.
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme != "https":
+        raise ManuscriptImageRejected("manuscript image URLs must use https")
+    try:
+        port = parsed.port
+    except ValueError:
+        raise ManuscriptImageRejected("manuscript image URL has an invalid port")
+    if parsed.username or parsed.password or port not in (None, 443):
+        raise ManuscriptImageRejected("manuscript image URL must not include credentials or a port")
+    if (parsed.hostname or "") not in MANUSCRIPT_IMAGE_HOSTS:
+        allowed = ", ".join(sorted(MANUSCRIPT_IMAGE_HOSTS))
+        raise ManuscriptImageRejected(
+            f"manuscript images can only be fetched from {allowed}; "
+            "use an image_url returned by get_available_manuscripts"
+        )
+
+
+def _fetch_manuscript_image(url: str) -> tuple[bytes, str]:
+    """Fetch an allowlisted manuscript image, returning (body, content type)."""
+    for _ in range(MAX_MANUSCRIPT_REDIRECTS + 1):
+        _validate_manuscript_image_url(url)
+        response = requests.get(url, timeout=30, stream=True, allow_redirects=False)
+        with response:
+            if response.is_redirect:
+                url = urllib.parse.urljoin(url, response.headers["location"])
+                continue
+            response.raise_for_status()
+
+            content_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
+            if not content_type.startswith("image/"):
+                raise ManuscriptImageRejected(
+                    f"expected an image but the server returned {content_type or 'no content type'}"
+                )
+
+            too_large = ManuscriptImageRejected(
+                f"manuscript image exceeds the {MAX_MANUSCRIPT_DOWNLOAD_SIZE:,}-byte download limit"
+            )
+            declared_length = response.headers.get("content-length", "")
+            if declared_length.isdigit() and int(declared_length) > MAX_MANUSCRIPT_DOWNLOAD_SIZE:
+                raise too_large
+            body = bytearray()
+            for chunk in response.iter_content(chunk_size=64 * 1024):
+                body.extend(chunk)
+                if len(body) > MAX_MANUSCRIPT_DOWNLOAD_SIZE:
+                    raise too_large
+            return bytes(body), content_type
+    raise ManuscriptImageRejected("too many redirects while fetching manuscript image")
+
+
 async def get_manuscript_image(logger, image_url: str, manuscript_title: str = None) -> dict:
     """
     Downloads a manuscript image from the provided URL and returns it as base64 data.
@@ -718,17 +782,10 @@ async def get_manuscript_image(logger, image_url: str, manuscript_title: str = N
     try:
         logger.debug(f"Downloading manuscript image from: {image_url}")
         
-        # Download the image
-        response = requests.get(image_url, timeout=30)
-        response.raise_for_status()
-        
-        # Get the content type to determine the MIME type
-        content_type = response.headers.get('content-type', 'image/jpeg')
-        if not content_type.startswith('image/'):
-            content_type = 'image/jpeg'  # Default fallback
-        
-        original_size = len(response.content)
-        image_data = response.content
+        image_bytes, content_type = _fetch_manuscript_image(image_url)
+
+        original_size = len(image_bytes)
+        image_data = image_bytes
         was_resized = False
         
         # Check if image needs to be resized
@@ -737,7 +794,7 @@ async def get_manuscript_image(logger, image_url: str, manuscript_title: str = N
             
             try:
                 # Open image with PIL
-                image = Image.open(BytesIO(response.content))
+                image = Image.open(BytesIO(image_bytes))
                 
                 # Calculate resize factor to get under MAX_IMAGE_SIZE
                 # We'll use an iterative approach since compressed size is hard to predict
@@ -786,12 +843,12 @@ async def get_manuscript_image(logger, image_url: str, manuscript_title: str = N
                 if attempts >= max_attempts:
                     logger.warning(f"Could not resize image below {MAX_IMAGE_SIZE} bytes after {max_attempts} attempts")
                     # Fall back to original image
-                    image_data = response.content
+                    image_data = image_bytes
                     
             except Exception as resize_error:
                 logger.error(f"Error during image resize: {str(resize_error)}")
                 # Fall back to original image
-                image_data = response.content
+                image_data = image_bytes
         
         # Convert to base64
         base64_data = base64.b64encode(image_data).decode('utf-8')
@@ -820,6 +877,12 @@ async def get_manuscript_image(logger, image_url: str, manuscript_title: str = N
             "source_url": image_url
         }
     
+    except ManuscriptImageRejected as e:
+        logger.warning(f"Rejected manuscript image request: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Manuscript image request rejected: {str(e)}"
+        }
     except requests.exceptions.RequestException as e:
         logger.error(f"Error downloading manuscript image: {str(e)}")
         return {
