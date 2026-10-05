@@ -67,6 +67,7 @@ MCP (Model Context Protocol) is an open protocol for connecting Large Language M
 | `SEFARIA_MCP_ALLOWED_HOSTS` | `mcp.sefaria.org,devmcp.sefaria.org` | Comma-separated `Host` values accepted on `/mcp` |
 | `SEFARIA_MCP_ALLOWED_ORIGINS` | `https://mcp.sefaria.org,https://devmcp.sefaria.org` | Comma-separated browser `Origin` values accepted on `/mcp` |
 | `SEFARIA_MCP_HOST_PROTECTION` | `on` | Set to `off` to disable Host/Origin validation |
+| `SEFARIA_MCP_DEPLOYMENT` | unset | Set to the environment name (`prod`, `dev`) **only on Sefaria's own deployments**. Outbound calls to the Sefaria API then carry the User-Agent `Sefaria/sefaria-mcp (prod)` instead of the default `sefaria-mcp`, so Sefaria can tell its own servers, per environment, apart from self-hosted copies in its logs |
 
 Loopback hosts (`127.0.0.1`, `localhost`, `::1`) are always accepted, so local
 development needs no extra configuration.

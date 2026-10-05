@@ -1,6 +1,7 @@
 import datetime
 import requests
 import json
+import re
 import urllib.parse
 import hdate
 import base64
@@ -20,6 +21,19 @@ if virtual_havruta_host and virtual_havruta_port:
     SEFARIA_AI_BASE_URL = f"http://{virtual_havruta_host}:{virtual_havruta_port}"
 else:
     SEFARIA_AI_BASE_URL = os.getenv("SEFARIA_AI_BASE_URL", "https://ai.sefaria.org")
+
+
+def _user_agent() -> str:
+    # The "Sefaria/" prefix is opt-in via SEFARIA_MCP_DEPLOYMENT because third
+    # parties self-host this server and must not present themselves as Sefaria.
+    deployment = re.sub(r"[()\r\n]", "", os.environ.get("SEFARIA_MCP_DEPLOYMENT", "")).strip()
+    return f"Sefaria/sefaria-mcp ({deployment})" if deployment else "sefaria-mcp"
+
+
+USER_AGENT = _user_agent()
+
+http_session = requests.Session()
+http_session.headers["User-Agent"] = USER_AGENT
 
 
 # Maximum image size in bytes (1MB)
@@ -50,7 +64,7 @@ def get_request_json_data(endpoint, ref=None, param=None):
         url += f"?{param}"
 
     try:
-        response = requests.get(url)
+        response = http_session.get(url)
         response.raise_for_status()  # Raise an exception for bad status codes
         data = response.json()
         return data
@@ -155,7 +169,7 @@ async def get_text(logger, reference: str, version_language: str = None) -> str:
         logger.debug(f"Text API request URL: {url}")
         
         # Make the request
-        response = requests.get(url)
+        response = http_session.get(url)
         response.raise_for_status()
         data = response.json()
         
@@ -216,7 +230,7 @@ async def _search(logger, query: str, filters=None, size=8):
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers)
+        response = http_session.post(url, json=payload, headers=headers)
         response.raise_for_status()
 
         logger.debug(f"Sefaria's Search API response: {response.text}")
@@ -420,7 +434,7 @@ async def get_name(logger, name: str, limit: int = None, type_filter: str = None
         logger.debug(f"Name API request URL: {url}")
         
         # Make the request
-        response = requests.get(url)
+        response = http_session.get(url)
         response.raise_for_status()
         
         # Parse the response
@@ -467,7 +481,7 @@ async def get_links(logger, reference: str, with_text: str = "0") -> str:
         logger.debug(f"Links API request URL: {url}")
         
         # Make the request
-        response = requests.get(url)
+        response = http_session.get(url)
         response.raise_for_status()
         
         # Parse the response
@@ -509,7 +523,7 @@ async def get_shape(logger, name: str) -> str:
         logger.debug(f"Shape API request URL: {url}")
         
         # Make the request
-        response = requests.get(url)
+        response = http_session.get(url)
         response.raise_for_status()
         
         # Parse the response
@@ -542,7 +556,7 @@ async def get_english_translations(logger, reference: str) -> str:
         logger.debug(f"English translations API request URL: {url}")
         
         # Make the request
-        response = requests.get(url)
+        response = http_session.get(url)
         response.raise_for_status()
         data = response.json()
         
@@ -591,7 +605,7 @@ async def get_index(logger, title: str) -> str:
         logger.debug(f"Index API request URL: {url}")
         
         # Make the request
-        response = requests.get(url)
+        response = http_session.get(url)
         response.raise_for_status()
         
         # Parse the response
@@ -644,7 +658,7 @@ async def get_topics(logger, topic_slug: str, with_links: bool = False, with_ref
         logger.debug(f"Topics API request URL: {url}")
         
         # Make the request
-        response = requests.get(url)
+        response = http_session.get(url)
         response.raise_for_status()
         
         # Parse the response
@@ -683,7 +697,7 @@ async def get_available_manuscripts(logger, reference: str) -> str:
         logger.debug(f"Manuscripts API request URL: {url}")
         
         # Make the request
-        response = requests.get(url)
+        response = http_session.get(url)
         response.raise_for_status()
         
         # Parse the response
@@ -719,7 +733,7 @@ async def get_manuscript_image(logger, image_url: str, manuscript_title: str = N
         logger.debug(f"Downloading manuscript image from: {image_url}")
         
         # Download the image
-        response = requests.get(image_url, timeout=30)
+        response = http_session.get(image_url, timeout=30)
         response.raise_for_status()
         
         # Get the content type to determine the MIME type
@@ -854,7 +868,7 @@ async def get_search_path_filter(logger, book_name: str) -> str:
         logger.debug(f"Search path filter API request URL: {url}")
         
         # Make the request
-        response = requests.get(url)
+        response = http_session.get(url)
         response.raise_for_status()
         
         # The response is just a string, not JSON
@@ -902,7 +916,7 @@ async def knn_search(logger, query: str, filters: dict = None) -> str:
             headers["Authorization"] = f"Bearer {bearer_token}"
         
         # Make the POST request
-        response = requests.post(url, json=payload, headers=headers)
+        response = http_session.post(url, json=payload, headers=headers)
         response.raise_for_status()
         
         # Parse the JSON response
