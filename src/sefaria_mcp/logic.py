@@ -623,14 +623,14 @@ async def get_index(logger, title: str) -> str:
     except requests.exceptions.RequestException as e:
         return f"Error during index API request: {str(e)}"
 
-async def get_topics(logger, topic_slug: str, with_links: bool = False, with_refs: bool = False) -> str:
+async def get_topics(logger, topic_slug: str, with_links: bool = False, with_refs: bool = True) -> str:
     """
     Retrieves detailed information about a specific topic from Sefaria's topic system.
     
     Args:
         topic_slug (str): The slug identifier for the topic (e.g. 'moses', 'sabbath', 'torah')
         with_links (bool, optional): Include related topic links. Default is False.
-        with_refs (bool, optional): Include text references tagged with this topic. Default is False.
+        with_refs (bool, optional): Include text references tagged with this topic. Default is True.
         
     Returns:
         str: JSON string containing topic metadata, description, and optionally links/references
@@ -1090,15 +1090,56 @@ def _optimize_topics_response(data):
     optimized = {k: v for k, v in data.items() if k in essential_fields}
     
     # Limit links to first 10 if present
-    if 'links' in data and isinstance(data['links'], list):
-        optimized['links'] = data['links'][:10]
-        
+    if 'links' in data:
+        optimized['links'] = _limit_grouped_items(data['links'], 'links', 10)
+
     # Severely limit refs to first 10 to prevent massive responses
-    if 'refs' in data and isinstance(data['refs'], list):
-        optimized['refs'] = data['refs'][:10]
-        optimized['refs_note'] = f"Showing first 10 of {len(data['refs'])} total refs"
-        
+    if 'refs' in data:
+        optimized['refs'] = _limit_grouped_items(data['refs'], 'refs', 10)
+        if isinstance(data['refs'], list):
+            optimized['refs_note'] = f"Showing first 10 of {len(data['refs'])} total refs"
+
     return optimized
+
+_TOPIC_REF_FIELDS = ('ref', 'is_sheet', 'descriptions')
+
+def _slim_topic_ref(ref):
+    """Keep only the fields of a topic ref an LLM needs (drops similarRefs, order, etc.)."""
+    if not isinstance(ref, dict):
+        return ref
+    return {k: ref[k] for k in _TOPIC_REF_FIELDS if k in ref}
+
+def _limit_grouped_items(value, items_key, limit):
+    """Limit topic refs/links to `limit` items.
+
+    The topics API returns refs and links grouped by link type, e.g.
+    {"about": {"refs": [...], "title": {...}, "shouldDisplay": true}}.
+    Each group's list is trimmed and annotated with its total count.
+    A flat list is also accepted and simply sliced.
+    """
+    if isinstance(value, list):
+        kept = value[:limit]
+        return [_slim_topic_ref(r) for r in kept] if items_key == 'refs' else kept
+    if not isinstance(value, dict):
+        return value
+    limited = {}
+    for link_type, group in value.items():
+        if isinstance(group, dict) and isinstance(group.get(items_key), list):
+            items = group[items_key]
+            limited_group = dict(group)
+            kept = items[:limit]
+            if items_key == 'refs':
+                kept = [_slim_topic_ref(r) for r in kept]
+            limited_group[items_key] = kept
+            limited_group['total'] = len(items)
+            if len(items) > limit:
+                limited_group['note'] = f"Showing first {limit} of {len(items)} total {items_key}"
+            limited[link_type] = limited_group
+        elif isinstance(group, list):
+            limited[link_type] = group[:limit]
+        else:
+            limited[link_type] = group
+    return limited
 
 def _optimize_index_response(data):
     """Optimize index response for LLM consumption"""
