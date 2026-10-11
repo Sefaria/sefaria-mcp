@@ -242,7 +242,7 @@ def register_tools(mcp: FastMCP) -> None:
         ctx: Context,
         topic_slug: str,
         with_links: bool = False,
-        with_refs: bool = False,
+        with_refs: bool = True,
     ) -> str:
         """
         Retrieves detailed information about specific topics in Jewish thought and texts.
@@ -250,7 +250,8 @@ def register_tools(mcp: FastMCP) -> None:
         Args:
             topic_slug: Topic identifier slug (e.g. 'moses', 'sabbath').
             with_links: Include links to related topics.
-            with_refs: Include text references tagged with this topic.
+            with_refs: Include the sources (text references) tagged with this topic, grouped by link type
+                (e.g. "about", "mention"); the first 10 per group are returned. On by default.
 
         Returns:
             JSON string with topic data.
