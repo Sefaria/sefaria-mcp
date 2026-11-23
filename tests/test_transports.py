@@ -92,6 +92,58 @@ def test_healthz_body(client):
     assert client.get("/healthz").json() == {"status": "ok"}
 
 
+# ---- well-known discovery documents ----
+# RFC 9728: the protected resource metadata names the server the client connected
+# to, and the client compares that identifier with the URL it was configured with.
+# Both production hosts serve this app, so the identifier follows the request.
+
+@pytest.mark.parametrize(
+    "host,expected",
+    [
+        ("mcp.sefaria.org", "https://mcp.sefaria.org"),
+        ("devmcp.sefaria.org", "https://devmcp.sefaria.org"),
+        ("127.0.0.1:8088", "http://127.0.0.1:8088"),
+        ("localhost:8088", "http://localhost:8088"),
+    ],
+)
+def test_protected_resource_names_the_request_origin(client, host, expected):
+    r = client.get("/.well-known/oauth-protected-resource", headers={"Host": host})
+    assert r.status_code == 200
+    assert r.json() == {"resource": expected, "authorization_servers": []}
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/.well-known/oauth-protected-resource",
+        "/.well-known/oauth-protected-resource/sse",
+        "/.well-known/oauth-protected-resource/mcp",
+        "/sse/.well-known/oauth-protected-resource",
+        "/mcp/.well-known/oauth-protected-resource",
+    ],
+)
+def test_protected_resource_answers_on_every_path_shape(client, path):
+    r = client.get(path, headers={"Host": "mcp.sefaria.org"})
+    assert r.status_code == 200
+    assert r.json()["resource"] == "https://mcp.sefaria.org"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/.well-known/oauth-authorization-server",
+        "/.well-known/oauth-authorization-server/sse",
+        "/.well-known/oauth-authorization-server/mcp",
+        "/sse/.well-known/oauth-authorization-server",
+        "/mcp/.well-known/oauth-authorization-server",
+    ],
+)
+def test_authorization_server_answers_empty_on_every_path_shape(client, path):
+    r = client.get(path, headers={"Host": "mcp.sefaria.org"})
+    assert r.status_code == 200
+    assert r.json() == {}
+
+
 # ---- env parsing ----
 
 def test_env_list_unset_uses_default(monkeypatch):
