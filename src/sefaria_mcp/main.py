@@ -89,29 +89,50 @@ if not HOST_PROTECTION:
 # a 404 sends it on to a dynamic-registration attempt that fails. Removing them
 # broke the settings Connect button and was reverted (PR #25 -> PR #28). Do not
 # "fix" these to 404s without re-measuring the connector flow first.
-PROTECTED_RESOURCE_DOC = {
-    # Use your actual origin, no trailing slash:
-    "resource": "https://devmcp.sefaria.org",
-    "authorization_servers": []  # <- explicitly none
-}
+def _public_origin(request: Request) -> str:
+    """Origin the client connected to, which is the resource identifier it can match."""
+    host = request.headers.get("host") or "localhost"
+    # The pod listens on plain HTTP behind the gateway, which forwards the public
+    # Host but not the client's scheme. Every public host this deployment answers
+    # on is HTTPS; only local development is plain HTTP.
+    scheme = "http" if host.startswith(("localhost", "127.", "[::1]", "::1")) else "https"
+    return f"{scheme}://{host}"
 
-# Add well-known OAuth endpoints using FastMCP's custom route decorator
-@mcp.custom_route("/.well-known/oauth-protected-resource", methods=["GET"])
+# Add well-known OAuth endpoints using FastMCP's custom route decorator.
+# Clients derive the metadata URL from the endpoint they are configured with, in
+# one of three shapes (RFC 9728 section 3.1 puts the endpoint path after the
+# well-known prefix; other clients put it before), so each document answers on all
+# of them for both transports.
+_PROTECTED_RESOURCE_PATHS = [
+    "/.well-known/oauth-protected-resource",
+    "/.well-known/oauth-protected-resource/sse",
+    "/.well-known/oauth-protected-resource/mcp",
+    "/sse/.well-known/oauth-protected-resource",
+    "/mcp/.well-known/oauth-protected-resource",
+]
+
+_AUTHORIZATION_SERVER_PATHS = [
+    "/.well-known/oauth-authorization-server",
+    "/.well-known/oauth-authorization-server/sse",
+    "/.well-known/oauth-authorization-server/mcp",
+    "/sse/.well-known/oauth-authorization-server",
+    "/mcp/.well-known/oauth-authorization-server",
+]
+
 async def protected_resource_endpoint(request: Request) -> JSONResponse:
-    return JSONResponse(PROTECTED_RESOURCE_DOC)
+    return JSONResponse(
+        {"resource": _public_origin(request), "authorization_servers": []}  # <- explicitly none
+    )
 
-@mcp.custom_route("/.well-known/oauth-authorization-server", methods=["GET"])
 async def authorization_server_endpoint(request: Request) -> JSONResponse:
     return JSONResponse({})
 
-# Defensive variants for clients that (incorrectly) append your path:
-@mcp.custom_route("/.well-known/oauth-protected-resource/sse", methods=["GET"])
-async def protected_resource_endpoint_sse(request: Request) -> JSONResponse:
-    return JSONResponse(PROTECTED_RESOURCE_DOC)
+def _register_well_known(paths: list[str], endpoint) -> None:
+    for path in paths:
+        mcp.custom_route(path, methods=["GET"])(endpoint)
 
-@mcp.custom_route("/.well-known/oauth-authorization-server/sse", methods=["GET"])
-async def authorization_server_endpoint_sse(request: Request) -> JSONResponse:
-    return JSONResponse({})
+_register_well_known(_PROTECTED_RESOURCE_PATHS, protected_resource_endpoint)
+_register_well_known(_AUTHORIZATION_SERVER_PATHS, authorization_server_endpoint)
 
 @mcp.custom_route("/healthz", methods=["GET"])
 async def healthz_endpoint(request: Request) -> JSONResponse:
